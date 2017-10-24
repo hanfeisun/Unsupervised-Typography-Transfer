@@ -1,3 +1,4 @@
 sample_dir/
 model_dir/
 fonts/
+*.ipynb
