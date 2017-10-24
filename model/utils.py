@@ -4,7 +4,7 @@ import scipy.misc as misc
 import numpy as np
 import imageio
 
-from io import StringIO
+from io import BytesIO
 
 
 def normalize_image(img):
@@ -26,7 +26,7 @@ def read_split_image(img):
 
 
 def bytes_to_file(bytes_img):
-    return StringIO(bytes_img)
+    return BytesIO(bytes_img)
 
 
 def read_split_image(img):

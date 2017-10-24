@@ -1,45 +1,77 @@
 import tensorflow as tf
 
 
-def model_fn(features, target, mode, params):
-    def conv(feature, num_outputs, kernel_size, stride, padding):
-        conv_x = tf.layers.conv2d(feature, num_outputs, kernel_size, stride, padding)
-        conv_x = tf.layers.batch_normalization(conv_x)
-        conv_x = tf.nn.elu(conv_x)
+def model_fn(features, labels, mode, params):
+    def conv(feature, num_outputs, kernel_size, stride, padding, scope_name, reuse=False):
+        with tf.variable_scope(scope_name, reuse=reuse):
+            conv_x = tf.layers.conv2d(feature, num_outputs, kernel_size, stride, padding, name='conv')
+            conv_x = tf.layers.batch_normalization(conv_x, name='batchnorm')
+            conv_x = tf.nn.elu(conv_x, name='elu')
         return conv_x
 
-    def deconv(feature, num_outputs, kernel_size, stride, padding):
-        deconv_x = tf.layers.conv2d_transpose(features, num_outputs, kernel_size, stride, padding)
+    def deconv(feature, num_outputs, kernel_size, stride, padding, scope_name, reuse=False):
+        with tf.variable_scope(scope_name, reuse=reuse):
+            deconv_x = tf.layers.conv2d_transpose(features, num_outputs, kernel_size, stride, padding, name='deconv')
         return deconv_x
 
     # data_format is (batch, height, width, channels)
 
-    e1 = conv(features['source'], 64, 3, 1, 'same')
-    e2 = conv(e1, 64, 3, 2, 'valid')
-    e3 = conv(e2, 128, 3, 1, 'same')
-    e4 = conv(e3, 128, 3, 2, 'valid')
-    e5 = conv(e4, 256, 3, 1, 'same')
-    e6 = conv(e5, 256, 3, 2, 'valid')
-    e7 = conv(e6, 512, 3, 1, 'same')
-    e8 = conv(e7, 512, 3, 2, 'valid')
+    e1 = conv(features['source'], 64, 3, 1, 'same', 'e1')
+    e2 = conv(e1, 64, 3, 2, 'valid', 'e2')
+    e3 = conv(e2, 128, 3, 1, 'same', 'e3')
+    e4 = conv(e3, 128, 3, 2, 'valid', 'e4')
+    e5 = conv(e4, 256, 3, 1, 'same', 'e5')
+    e6 = conv(e5, 256, 3, 2, 'valid', 'e6')
+    e7 = conv(e6, 512, 3, 1, 'same', 'e7')
+    e8 = conv(e7, 512, 3, 2, 'valid', 'e8')
 
-    d1 = deconv(e8, 512, 3, 2, 'valid')
-    d2 = conv(tf.concat([e7, d1], axis=3), 512, 3, 1, 'same')
-    d3 = conv(d2, 256, 3, 1, 'same')
-    d4 = deconv(d3, 256, 3, 2, 'valid')
-    d5 = conv(tf.concat([e5, d4], axis=3), 256, 3, 1, 'same')
-    d6 = conv(d5, 128, 3, 1, 'same')
-    d7 = deconv(d6, 128, 3, 2, 'valid')
-    d8 = conv(tf.concat([e3, d7], axis=3), 128, 3, 1, 'same')
-    d9 = conv(d8, 64, 3, 1, 'same')
-    d10 = deconv(d9, 64, 3, 2, 'valid')
-    d11 = conv(tf.concat([e1, d10], axis=3), 64, 3, 1, 'same')
-    d12 = conv(d11, 1, 3, 1, 'same')
+    d1 = deconv(e8, 512, 3, 2, 'valid', 'd1')
+    d2 = conv(tf.concat([e7, d1], axis=3), 512, 3, 1, 'same', 'd2')
+    d3 = conv(d2, 256, 3, 1, 'same', 'd3')
+    d4 = deconv(d3, 256, 3, 2, 'valid', 'd4')
+    d5 = conv(tf.concat([e5, d4], axis=3), 256, 3, 1, 'same', 'd5')
+    d6 = conv(d5, 128, 3, 1, 'same', 'd6')
+    d7 = deconv(d6, 128, 3, 2, 'valid', 'd7')
+    d8 = conv(tf.concat([e3, d7], axis=3), 128, 3, 1, 'same', 'd8')
+    d9 = conv(d8, 64, 3, 1, 'same', 'd9')
+    d10 = deconv(d9, 64, 3, 2, 'valid', 'd10')
+    d11 = conv(tf.concat([e1, d10], axis=3), 64, 3, 1, 'same', 'd11')
+    d12 = conv(d11, 1, 3, 1, 'same', 'd12')
+    generated = tf.nn.sigmoid(d12, 'gen')
 
-    dis1 = conv(d12, 2, 3, 1, 'same')
-    dis2 = conv(dis1, 4, 3, 2, 'valid')
-    dis3 = conv(dis2, 8, 3, 2, 'valid')
-    dis4 = conv(dis3, 16, 3, 2, 'valid')
-    flattened = tf.contrib.layers.flatten(dis4)
+    def discriminator(image, reuse=False):
+        with tf.variable_scope('discriminator', reuse=reuse):
+            net = conv(image, 2, 3, 1, 'same', 'dis_conv1')
+            net = conv(net, 4, 3, 2, 'valid', 'dis_conv2')
+            net = conv(net, 8, 3, 2, 'valid', 'dis_conv3')
+            net = conv(net, 16, 3, 2, 'valid', 'dis_conv4')
+            logits = tf.layers.dense(tf.contrib.layers.flatten(net), 1, name='logits')
+            prob = tf.nn.sigmoid(logits, 'prob')
+        return logits, prob
 
+    real_target = features['target']
+    real_logits, real_prob = discriminator(real_target)
+    fake_target = generated
+    fake_logits, fake_prob = discriminator(fake_target, reuse=True)
 
+    d_loss_real = tf.reduce_mean(
+        tf.nn.sigmoid_cross_entropy_with_logits(logits=real_logits, labels=tf.ones_like(real_logits)))
+    d_loss_fake = tf.reduce_mean(
+        tf.nn.sigmoid_cross_entropy_with_logits(logits=fake_logits, labels=tf.ones_like(fake_logits)))
+
+    d_loss = d_loss_real + d_loss_fake
+
+    d12_flatten = tf.reshape(d12, [-1, 64 * 64])
+    target_flatten = tf.reshape(real_target, [-1, 64 * 64])
+
+    g_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=d12_flatten, labels=target_flatten))
+
+    learning_rate = params['learning_rate']
+
+    loss = d_loss + g_loss
+    train_op = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(loss)
+    return tf.estimator.EstimatorSpec(
+        mode=mode,
+        loss=loss,
+        train_op=train_op
+    )
