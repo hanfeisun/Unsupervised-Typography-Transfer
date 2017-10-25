@@ -68,10 +68,24 @@ def model_fn(features, labels, mode, params):
 
     learning_rate = params['learning_rate']
 
-    loss = d_loss + g_loss
+    tf.summary.scalar("d_loss", d_loss)
+    tf.summary.scalar("g_loss", g_loss)
+    tf.summary.image("original", features['source'])
+    tf.summary.image("target", features['target'])
+    tf.summary.image("transfer", generated)
+    loss = g_loss + d_loss * 0.05
+    # loss = d_loss + g_loss
     train_op = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(loss)
+
+    logging_hook = tf.train.LoggingTensorHook({"loss": loss, "g_loss": g_loss, "d_loss": d_loss}, every_n_iter=100)
+    summary_hook = tf.train.SummarySaverHook(
+        save_secs=5,
+        output_dir="./board",
+        summary_op=tf.summary.merge_all())
+
     return tf.estimator.EstimatorSpec(
         mode=mode,
         loss=loss,
-        train_op=train_op
+        train_op=train_op,
+        training_hooks=[logging_hook, summary_hook]
     )
