@@ -57,7 +57,7 @@ def model_fn(features, labels, mode, params):
     d_loss_real = tf.reduce_mean(
         tf.nn.sigmoid_cross_entropy_with_logits(logits=real_logits, labels=tf.ones_like(real_logits)))
     d_loss_fake = tf.reduce_mean(
-        tf.nn.sigmoid_cross_entropy_with_logits(logits=fake_logits, labels=tf.ones_like(fake_logits)))
+        tf.nn.sigmoid_cross_entropy_with_logits(logits=fake_logits, labels=tf.zeros_like(fake_logits)))
 
     d_loss = d_loss_real + d_loss_fake
 
@@ -73,7 +73,7 @@ def model_fn(features, labels, mode, params):
     tf.summary.image("original", features['source'])
     tf.summary.image("target", features['target'])
     tf.summary.image("transfer", generated)
-    loss = g_loss + d_loss * 0.05
+    loss = g_loss + d_loss * 0.5
     # loss = d_loss + g_loss
     train_op = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(loss)
 
