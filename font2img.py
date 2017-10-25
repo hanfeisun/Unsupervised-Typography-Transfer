@@ -41,7 +41,7 @@ def draw_example(ch, src_font, dst_font, canvas_size, x_offset, y_offset, filter
     if dst_hash in filter_hashes:
         return None
     src_img = draw_single_char(ch, src_font, canvas_size, x_offset, y_offset)
-    example_img = Image.new("RGB", (canvas_size * 2, canvas_size), (255, 255, 255))
+    example_img = Image.new("L", (canvas_size * 2, canvas_size), (255, 255, 255))
     example_img.paste(dst_img, (0, 0))
     example_img.paste(src_img, (canvas_size, 0))
     return example_img

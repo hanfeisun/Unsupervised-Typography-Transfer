@@ -33,8 +33,9 @@ def process(img):
     img = bytes_to_file(img)
     try:
         img_A, img_B = read_split_image(img)
-        img_A = normalize_image(img_A)
-        img_B = normalize_image(img_B)
+        shape = img_A.shape
+        img_A = np.array(normalize_image(img_A)).reshape((shape[0], shape[1], -1))
+        img_B = np.array(normalize_image(img_B)).reshape((shape[0], shape[1], -1))
         return img_A, img_B
     finally:
         img.close()

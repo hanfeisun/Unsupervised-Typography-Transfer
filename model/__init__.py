@@ -2,56 +2,56 @@ import tensorflow as tf
 
 
 def model_fn(features, labels, mode, params):
-    def conv(feature, num_outputs, kernel_size, stride, padding, scope_name, reuse=False):
+    def conv(feature, num_outputs, kernel_size, stride, scope_name, reuse=False, padding='same'):
         with tf.variable_scope(scope_name, reuse=reuse):
             conv_x = tf.layers.conv2d(feature, num_outputs, kernel_size, stride, padding, name='conv')
             conv_x = tf.layers.batch_normalization(conv_x, name='batchnorm')
             conv_x = tf.nn.elu(conv_x, name='elu')
         return conv_x
 
-    def deconv(feature, num_outputs, kernel_size, stride, padding, scope_name, reuse=False):
+    def deconv(feature, num_outputs, kernel_size, stride, scope_name, reuse=False, padding='same'):
         with tf.variable_scope(scope_name, reuse=reuse):
-            deconv_x = tf.layers.conv2d_transpose(features, num_outputs, kernel_size, stride, padding, name='deconv')
+            deconv_x = tf.layers.conv2d_transpose(feature, num_outputs, kernel_size, stride, padding, name='deconv')
         return deconv_x
 
     # data_format is (batch, height, width, channels)
 
-    e1 = conv(features['source'], 64, 3, 1, 'same', 'e1')
-    e2 = conv(e1, 64, 3, 2, 'valid', 'e2')
-    e3 = conv(e2, 128, 3, 1, 'same', 'e3')
-    e4 = conv(e3, 128, 3, 2, 'valid', 'e4')
-    e5 = conv(e4, 256, 3, 1, 'same', 'e5')
-    e6 = conv(e5, 256, 3, 2, 'valid', 'e6')
-    e7 = conv(e6, 512, 3, 1, 'same', 'e7')
-    e8 = conv(e7, 512, 3, 2, 'valid', 'e8')
+    e1 = conv(features['source'], 64, 3, 1, 'e1')
+    e2 = conv(e1, 64, 3, 2, 'e2')
+    e3 = conv(e2, 128, 3, 1, 'e3')
+    e4 = conv(e3, 128, 3, 2, 'e4')
+    e5 = conv(e4, 256, 3, 1, 'e5')
+    e6 = conv(e5, 256, 3, 2, 'e6')
+    e7 = conv(e6, 512, 3, 1, 'e7')
+    e8 = conv(e7, 512, 3, 2, 'e8')
 
-    d1 = deconv(e8, 512, 3, 2, 'valid', 'd1')
-    d2 = conv(tf.concat([e7, d1], axis=3), 512, 3, 1, 'same', 'd2')
-    d3 = conv(d2, 256, 3, 1, 'same', 'd3')
-    d4 = deconv(d3, 256, 3, 2, 'valid', 'd4')
-    d5 = conv(tf.concat([e5, d4], axis=3), 256, 3, 1, 'same', 'd5')
-    d6 = conv(d5, 128, 3, 1, 'same', 'd6')
-    d7 = deconv(d6, 128, 3, 2, 'valid', 'd7')
-    d8 = conv(tf.concat([e3, d7], axis=3), 128, 3, 1, 'same', 'd8')
-    d9 = conv(d8, 64, 3, 1, 'same', 'd9')
-    d10 = deconv(d9, 64, 3, 2, 'valid', 'd10')
-    d11 = conv(tf.concat([e1, d10], axis=3), 64, 3, 1, 'same', 'd11')
-    d12 = conv(d11, 1, 3, 1, 'same', 'd12')
+    d1 = deconv(e8, 512, 3, 2, 'd1')
+    d2 = conv(tf.concat([e7, d1], axis=3), 512, 3, 1, 'd2')
+    d3 = conv(d2, 256, 3, 1, 'd3')
+    d4 = deconv(d3, 256, 3, 2, 'd4')
+    d5 = conv(tf.concat([e5, d4], axis=3), 256, 3, 1, 'd5')
+    d6 = conv(d5, 128, 3, 1, 'd6')
+    d7 = deconv(d6, 128, 3, 2, 'd7')
+    d8 = conv(tf.concat([e3, d7], axis=3), 128, 3, 1, 'd8')
+    d9 = conv(d8, 64, 3, 1, 'd9')
+    d10 = deconv(d9, 64, 3, 2, 'd10')
+    d11 = conv(tf.concat([e1, d10], axis=3), 64, 3, 1, 'd11')
+    d12 = conv(d11, 1, 3, 1, 'd12')
     generated = tf.nn.sigmoid(d12, 'gen')
 
     def discriminator(image, reuse=False):
         with tf.variable_scope('discriminator', reuse=reuse):
-            net = conv(image, 2, 3, 1, 'same', 'dis_conv1')
-            net = conv(net, 4, 3, 2, 'valid', 'dis_conv2')
-            net = conv(net, 8, 3, 2, 'valid', 'dis_conv3')
-            net = conv(net, 16, 3, 2, 'valid', 'dis_conv4')
+            net = conv(image, 2, 3, 1, 'dis_conv1')
+            net = conv(net, 4, 3, 2, 'dis_conv2')
+            net = conv(net, 8, 3, 2, 'dis_conv3')
+            net = conv(net, 16, 3, 2, 'dis_conv4')
             logits = tf.layers.dense(tf.contrib.layers.flatten(net), 1, name='logits')
             prob = tf.nn.sigmoid(logits, 'prob')
         return logits, prob
 
     real_target = features['target']
-    real_logits, real_prob = discriminator(real_target)
     fake_target = generated
+    real_logits, real_prob = discriminator(real_target)
     fake_logits, fake_prob = discriminator(fake_target, reuse=True)
 
     d_loss_real = tf.reduce_mean(
