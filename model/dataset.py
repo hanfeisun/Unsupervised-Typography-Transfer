@@ -41,7 +41,7 @@ def process(img):
         img.close()
 
 
-def input_fn(path):
+def input_fn(path, shuffle=True, num_epochs=None):
     pickled = PickledImageProvider(path)
 
     processed = [np.array(process(e[1])).astype(np.float32) for e in pickled.examples]
@@ -53,8 +53,7 @@ def input_fn(path):
     return tf.estimator.inputs.numpy_input_fn(
         x=x,
         y=None,
-        shuffle=True,
-        num_epochs=None,
+        shuffle=shuffle,
+        num_epochs=num_epochs,
         batch_size=8
-
     )

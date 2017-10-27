@@ -9,3 +9,6 @@ sample:
 
 tb:
 	rm -rf board/* && tensorboard --logdir=board
+
+clean:
+	rm -rf ./model_dir/*.png
