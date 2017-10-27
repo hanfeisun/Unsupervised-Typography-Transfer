@@ -2,4 +2,6 @@ sample_dir/
 model_dir/
 fonts/
 *.ipynb
+*.pyc
 __pycache__
+board/

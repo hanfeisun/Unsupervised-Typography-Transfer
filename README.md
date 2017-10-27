@@ -4,6 +4,8 @@
 
 Install Python3 (>=3.5)
 
+Put two fonts (NotoSansCJK.ttc, NotoSerifCJK.ttc) under the `./fonts` folder.
+
 ## Installation
 
 Type the following command in shell:

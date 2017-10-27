@@ -43,7 +43,7 @@ def process(img):
 
 def input_fn(path):
     pickled = PickledImageProvider(path)
-    labels = np.array([e[0] for e in pickled.examples])
+
     processed = [np.array(process(e[1])).astype(np.float32) for e in pickled.examples]
     x = {
         'source': np.array([img[0] for img in processed]),
@@ -52,8 +52,9 @@ def input_fn(path):
 
     return tf.estimator.inputs.numpy_input_fn(
         x=x,
-        y=labels,
-        batch_size=64,
+        y=None,
         shuffle=True,
-        num_epochs=None
+        num_epochs=None,
+        batch_size=8
+
     )

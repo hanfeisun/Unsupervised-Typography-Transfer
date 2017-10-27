@@ -79,7 +79,7 @@ def font2img(src, dst, charset, char_size, canvas_size,
             break
         e = draw_example(c, src_font, dst_font, canvas_size, x_offset, y_offset, filter_hashes)
         if e:
-            e.save(os.path.join(sample_dir, "%d_%04d.jpg" % (label, count)))
+            e.save(os.path.join(sample_dir, "%d_%04d.png" % (label, count)))
             count += 1
             if count % 100 == 0:
                 print("processed %d chars" % count)
