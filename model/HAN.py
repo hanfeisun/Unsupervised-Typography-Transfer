@@ -10,7 +10,8 @@ def model_fn(features, labels, mode, params):
         with tf.variable_scope(scope_name, reuse=reuse):
             conv_x = tf.layers.conv2d(feature, num_outputs, kernel_size, stride, padding, name='conv')
             if BN:
-                conv_x = tf.layers.batch_normalization(conv_x, name='batchnorm')
+                conv_x = tf.layers.batch_normalization(conv_x, name='batchnorm',
+                                                       training=(mode is tf.estimator.ModeKeys.TRAIN))
             conv_x = tf.nn.elu(conv_x, name='elu')
         return conv_x
 
@@ -19,7 +20,8 @@ def model_fn(features, labels, mode, params):
         with tf.variable_scope(scope_name, reuse=reuse):
             deconv_x = tf.layers.conv2d_transpose(feature, num_outputs, kernel_size, stride, padding, name='deconv')
             if BN:
-                deconv_x = tf.layers.batch_normalization(deconv_x, name='batchnorm')
+                deconv_x = tf.layers.batch_normalization(deconv_x, name='batchnorm',
+                                                         training=(mode is tf.estimator.ModeKeys.TRAIN)                                                        )
         return deconv_x
 
     # data_format is (batch, height, width, channels)
