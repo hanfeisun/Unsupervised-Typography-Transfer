@@ -5,3 +5,4 @@ fonts/
 *.pyc
 __pycache__
 board/
+.idea/
