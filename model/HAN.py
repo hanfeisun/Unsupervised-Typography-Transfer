@@ -27,6 +27,7 @@ def model_fn(features, labels, mode, params):
     # data_format is (batch, height, width, channels)
 
     with tf.variable_scope(G_PREFIX):
+        # architecture picture: https://www.dropbox.com/s/1xjzj7u1nf4x09k/IMG_0073.JPG?dl=0
         e1 = conv(features['source'], 64, 3, 1, 'e1')
         e2 = conv(e1, 64, 3, 2, 'e2')
         e3 = conv(e2, 128, 3, 1, 'e3')
