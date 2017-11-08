@@ -4,6 +4,7 @@ import tensorflow as tf
 import random
 import os
 from enum import Enum
+from tensorflow.contrib.data import Dataset
 
 
 class PairPolicy(Enum):
@@ -39,6 +40,23 @@ class PickledImageProvider(object):
             return examples
 
 
+generator_x = None
+generator_batch_size = None
+generator_num_epochs = None
+
+def generator():
+    # Total number of training examples
+    size = generator_x['source'].shape[0]
+    # Run forever
+    while True:
+        idx = np.random.randint(size, size=generator_batch_size)
+        x_mb = {}
+        x_mb['source'] = generator_x['source'][idx,:,:,:]
+        x_mb['target'] = generator_x['target'][idx,:,:,:].copy()
+        np.random.shuffle(x_mb['target'])
+        yield x_mb
+
+
 def process(img):
     img = bytes_to_file(img)
     try:
@@ -51,7 +69,7 @@ def process(img):
         img.close()
 
 
-def input_fn(path, shuffle=True, num_epochs=None, pair_policy=PairPolicy.STRONG_PAIR):
+def input_fn(path, shuffle=True, num_epochs=None, pair_policy=PairPolicy.STRONG_PAIR, batch_size=8):
     pickled = PickledImageProvider(path)
     processed = [np.array(process(e[1])).astype(np.float32) for e in pickled.examples]
     x = {
@@ -65,17 +83,23 @@ def input_fn(path, shuffle=True, num_epochs=None, pair_policy=PairPolicy.STRONG_
             y=None,
             shuffle=shuffle,
             num_epochs=num_epochs,
-            batch_size=8
+            batch_size=batch_size
         )
     elif pair_policy is PairPolicy.SOFT_PAIR_MINUS:
-        np.random.shuffle(x['target'])
-        return tf.estimator.inputs.numpy_input_fn(
-            x=x,
-            y=None,
-            shuffle=shuffle,
-            num_epochs=num_epochs,
-            batch_size=8
+        global generator_x
+        generator_x = x
+        global generator_batch_size
+        generator_batch_size = batch_size
+        global generator_num_epochs
+        generator_num_epochs = num_epochs
+
+        shape = (batch_size,) + x['source'].shape[1:]
+        x_dataset = Dataset.from_generator(
+            generator=generator, 
+            output_types={'source': tf.float32, 'target': tf.float32},
+            output_shapes={'source': shape, 'target': shape}
         )
+        return x_dataset.make_one_shot_iterator
     elif pair_policy is PairPolicy.SOFT_PAIR_PLUS:
         raise NotImplemented
 

@@ -1,4 +1,5 @@
 import tensorflow as tf
+from tensorflow.contrib.data import Iterator
 
 G_PREFIX = "generator"
 D_PREFIX = "discriminator"
@@ -24,9 +25,14 @@ def model_fn(features, labels, mode, params):
                                                          training=(mode is tf.estimator.ModeKeys.TRAIN)                                                        )
         return deconv_x
 
-    # data_format is (batch, height, width, channels)
+    # Generate soft-pairs
+    if isinstance(features, Iterator):
+        features = features.get_next()
+
+    # data_format is (batch, height, width, channels)        
 
     with tf.variable_scope(G_PREFIX):
+        
         # architecture picture: https://www.dropbox.com/s/1xjzj7u1nf4x09k/IMG_0073.JPG?dl=0
         e1 = conv(features['source'], 64, 3, 1, 'e1')
         e2 = conv(e1, 64, 3, 2, 'e2')
