@@ -6,7 +6,7 @@
 import tensorflow as tf
 import argparse
 
-from .zi2ziNet.unet import UNet
+from zi2ziNet.unet import UNet
 
 parser = argparse.ArgumentParser(description='Train')
 parser.add_argument('--experiment_dir', dest='experiment_dir', required=True,
@@ -43,6 +43,14 @@ parser.add_argument('--flip_labels', dest='flip_labels', type=int, default=None,
 args = parser.parse_args()
 
 
+def inspect_graph():
+    from pprint import pprint
+    var_list = tf.global_variables()
+    collection_list = tf.get_default_graph().get_all_collection_keys()
+    pprint(var_list)
+    pprint(tf.get_default_graph().get_tensor_by_name("no_target_A_and_B_images:0"))
+
+
 def main(_):
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
@@ -53,16 +61,15 @@ def main(_):
                      embedding_dim=args.embedding_dim, L1_penalty=args.L1_penalty, Lconst_penalty=args.Lconst_penalty,
                      Ltv_penalty=args.Ltv_penalty, Lcategory_penalty=args.Lcategory_penalty)
         model.register_session(sess)
-        if args.flip_labels:
-            model.build_model(is_training=True, inst_norm=args.inst_norm, no_target_source=True)
-        else:
-            model.build_model(is_training=True, inst_norm=args.inst_norm)
-        fine_tune_list = None
-        if args.fine_tune:
-            ids = args.fine_tune.split(",")
-            fine_tune_list = set([int(i) for i in ids])
-        model.train(lr=args.lr, epoch=args.epoch, resume=args.resume,
-                    schedule=args.schedule, freeze_encoder=args.freeze_encoder, fine_tune=fine_tune_list,
+        model.build_model(is_training=True, inst_norm=args.inst_norm)
+        tf.global_variables_initializer().run()
+        saver = tf.train.Saver(var_list=model.retrieve_generator_vars())
+        model.restore_model(saver, args.experiment_dir)
+        inspect_graph()
+
+
+        model.trainU(lr=args.lr, epoch=args.epoch,
+                    schedule=args.schedule, fine_tune=None,
                     sample_steps=args.sample_steps, checkpoint_steps=args.checkpoint_steps,
                     flip_labels=args.flip_labels)
 

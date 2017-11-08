@@ -152,7 +152,7 @@ class UNet(object):
 
             return tf.nn.sigmoid(fc1), fc1, fc2
 
-    def build_model(self, is_training=True, inst_norm=False, no_target_source=False):
+    def build_model(self, is_training=True, inst_norm=False, no_target_source=False, not_paired=False):
         real_data = tf.placeholder(tf.float32,
                                    [self.batch_size, self.input_width, self.input_width,
                                     self.input_filters + self.output_filters],
@@ -212,7 +212,11 @@ class UNet(object):
                                                                             labels=tf.ones_like(fake_D)))
 
         d_loss = d_loss_real + d_loss_fake + category_loss / 2.0
-        g_loss = cheat_loss + l1_loss + self.Lcategory_penalty * fake_category_loss + const_loss + tv_loss
+
+        if not_paired:
+            g_loss = cheat_loss + self.Lcategory_penalty * fake_category_loss + const_loss + tv_loss
+        else:
+            g_loss = cheat_loss + l1_loss + self.Lcategory_penalty * fake_category_loss + const_loss + tv_loss
 
         if no_target_source:
             # no_target source are examples that don't have the corresponding target images
@@ -340,9 +344,8 @@ class UNet(object):
     def restore_model(self, saver, model_dir):
 
         ckpt = tf.train.get_checkpoint_state(model_dir)
-
         if ckpt:
-            saver.restore(self.sess, ckpt.model_checkpoint_path)
+            saver.restore(self.sess, ckpt)
             print("restored model %s" % model_dir)
         else:
             print("fail to restore model %s" % model_dir)
@@ -585,6 +588,107 @@ class UNet(object):
                              "category_loss: %.5f, cheat_loss: %.5f, const_loss: %.5f, l1_loss: %.5f, tv_loss: %.5f"
                 print(log_format % (ei, bid, total_batches, passed, batch_d_loss, batch_g_loss,
                                     category_loss, cheat_loss, const_loss, l1_loss, tv_loss))
+                summary_writer.add_summary(d_summary, counter)
+                summary_writer.add_summary(g_summary, counter)
+
+                if counter % sample_steps == 0:
+                    # sample the current model states with val data
+                    self.validate_model(val_batch_iter, ei, counter)
+
+                if counter % checkpoint_steps == 0:
+                    print("Checkpoint: save checkpoint step %d" % counter)
+                    self.checkpoint(saver, counter)
+
+    def trainU(self, lr=0.0002, epoch=100, schedule=10, flip_labels=False,
+              fine_tune=None, sample_steps=50, checkpoint_steps=500):
+        # Unsupervised version of zi2zi, modifications on the original train operations are:
+        # (1) no embedding IDs, no category loss
+        # (2) use pretrained model and freeze the encoders
+        # (3) no L1 loss because A and B is not paired anymore
+        g_vars, d_vars = self.retrieve_trainable_vars(freeze_encoder=True)
+        input_handle, loss_handle, _, summary_handle = self.retrieve_handles()
+
+        if not self.sess:
+            raise Exception("no session registered")
+
+        learning_rate = tf.placeholder(tf.float32, name="learning_rate")
+
+        d_optimizer = tf.train.AdamOptimizer(learning_rate, beta1=0.5).minimize(loss_handle.d_loss,
+                                                                                var_list=d_vars)
+        g_optimizer = tf.train.AdamOptimizer(learning_rate, beta1=0.5).minimize(loss_handle.g_loss,
+                                                                                var_list=g_vars)
+        tf.global_variables_initializer().run()
+        real_data = input_handle.real_data
+        no_target_data = input_handle.no_target_data
+        embedding_ids = input_handle.embedding_ids
+
+        # filter by one type of labels
+        data_provider = TrainDataProvider(self.data_dir, filter_by=fine_tune)
+        total_batches = data_provider.compute_total_batch_num(self.batch_size)
+        val_batch_iter = data_provider.get_val_iter(self.batch_size)
+
+        saver = tf.train.Saver(max_to_keep=3)
+        summary_writer = tf.summary.FileWriter(self.log_dir, self.sess.graph)
+
+
+
+        current_lr = lr
+        counter = 0
+        start_time = time.time()
+
+        for ei in range(epoch):
+            train_batch_iter = data_provider.get_train_iter(self.batch_size, shuffle_pair=True)
+
+            if (ei + 1) % schedule == 0:
+                update_lr = current_lr / 2.0
+                # minimum learning rate guarantee
+                update_lr = max(update_lr, 0.0002)
+                print("decay learning rate from %.5f to %.5f" % (current_lr, update_lr))
+                current_lr = update_lr
+
+            for bid, batch in enumerate(train_batch_iter):
+                counter += 1
+                labels, batch_images = batch
+                print(batch_images.shape)
+                # Optimize D
+                _, batch_d_loss, d_summary = self.sess.run([d_optimizer, loss_handle.d_loss,
+                                                            summary_handle.d_merged],
+                                                           feed_dict={
+                                                               real_data: batch_images,
+                                                               learning_rate: current_lr,
+                                                               no_target_data: batch_images,
+                                                               embedding_ids: labels
+
+                                                           })
+                # Optimize G
+                _, batch_g_loss = self.sess.run([g_optimizer, loss_handle.g_loss],
+                                                feed_dict={
+                                                    real_data: batch_images,
+                                                    learning_rate: current_lr,
+                                                    no_target_data: batch_images,
+                                                    embedding_ids: labels
+                                                })
+                # magic move to Optimize G again
+                # according to https://github.com/carpedm20/DCGAN-tensorflow
+                # collect all the losses along the way
+                _, batch_g_loss, cheat_loss, \
+                const_loss, tv_loss, g_summary = self.sess.run([g_optimizer,
+                                                                         loss_handle.g_loss,
+                                                                         loss_handle.cheat_loss,
+                                                                         loss_handle.const_loss,
+                                                                         loss_handle.tv_loss,
+                                                                         summary_handle.g_merged],
+                                                                        feed_dict={
+                                                                            real_data: batch_images,
+                                                                            learning_rate: current_lr,
+                                                                            no_target_data: batch_images,
+                                                                            embedding_ids: labels
+                                                                        })
+                passed = time.time() - start_time
+                log_format = "Epoch: [%2d], [%4d/%4d] time: %4.4f, d_loss: %.5f, g_loss: %.5f, " + \
+                             "cheat_loss: %.5f, const_loss: %.5f,  tv_loss: %.5f"
+                print(log_format % (ei, bid, total_batches, passed, batch_d_loss, batch_g_loss,
+                                     cheat_loss, const_loss, tv_loss))
                 summary_writer.add_summary(d_summary, counter)
                 summary_writer.add_summary(g_summary, counter)
 

@@ -27,21 +27,21 @@ def load_global_charset():
     CN_T_CHARSET = cjk["gb2312_t"]
 
 
-def draw_single_char(ch, font, canvas_size, x_offset, y_offset):
-    img = Image.new("RGB", (canvas_size, canvas_size), (255, 255, 255))
+def draw_single_char(ch, font, canvas_size, x_offset, y_offset, mode="L"):
+    img = Image.new(mode, (canvas_size, canvas_size), (255, 255, 255))
     draw = ImageDraw.Draw(img)
     draw.text((x_offset, y_offset), ch, (0, 0, 0), font=font)
     return img
 
 
-def draw_example(ch, src_font, dst_font, canvas_size, x_offset, y_offset, filter_hashes):
+def draw_example(ch, src_font, dst_font, canvas_size, x_offset, y_offset, filter_hashes, mode="L"):
     dst_img = draw_single_char(ch, dst_font, canvas_size, x_offset, y_offset)
     # check the filter example in the hashes or not
     dst_hash = hash(dst_img.tobytes())
     if dst_hash in filter_hashes:
         return None
-    src_img = draw_single_char(ch, src_font, canvas_size, x_offset, y_offset)
-    example_img = Image.new("L", (canvas_size * 2, canvas_size), (255, 255, 255))
+    src_img = draw_single_char(ch, src_font, canvas_size, x_offset, y_offset, mode)
+    example_img = Image.new(mode, (canvas_size * 2, canvas_size), (255, 255, 255))
     example_img.paste(dst_img, (0, 0))
     example_img.paste(src_img, (canvas_size, 0))
     return example_img
@@ -63,7 +63,7 @@ def filter_recurring_hash(charset, font, canvas_size, x_offset, y_offset):
 
 
 def font2img(src, dst, charset, char_size, canvas_size,
-             x_offset, y_offset, sample_count, sample_dir, label=0, filter_by_hash=True):
+             x_offset, y_offset, sample_count, sample_dir, label=0, filter_by_hash=True, mode="L"):
     src_font = ImageFont.truetype(src, size=char_size)
     dst_font = ImageFont.truetype(dst, size=char_size)
 
@@ -77,7 +77,7 @@ def font2img(src, dst, charset, char_size, canvas_size,
     for c in charset:
         if count == sample_count:
             break
-        e = draw_example(c, src_font, dst_font, canvas_size, x_offset, y_offset, filter_hashes)
+        e = draw_example(c, src_font, dst_font, canvas_size, x_offset, y_offset, filter_hashes, mode)
         if e:
             e.save(os.path.join(sample_dir, "%d_%04d.png" % (label, count)))
             count += 1
@@ -100,6 +100,8 @@ parser.add_argument('--y_offset', dest='y_offset', type=int, default=20, help='y
 parser.add_argument('--sample_count', dest='sample_count', type=int, default=1000, help='number of characters to draw')
 parser.add_argument('--sample_dir', dest='sample_dir', default='sample_dir', help='directory to save examples')
 parser.add_argument('--label', dest='label', type=int, default=0, help='label as the prefix of examples')
+parser.add_argument('--mode', dest='mode', choices=["L", "RGB"], default="L", help='mode for image, RGB or L')
+
 
 args = parser.parse_args()
 
@@ -112,4 +114,4 @@ if __name__ == "__main__":
         np.random.shuffle(charset)
     font2img(args.src_font, args.dst_font, charset, args.char_size,
              args.canvas_size, args.x_offset, args.y_offset,
-             args.sample_count, args.sample_dir, args.label, args.filter)
+             args.sample_count, args.sample_dir, args.label, args.filter, args.mode)

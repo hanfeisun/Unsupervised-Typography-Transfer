@@ -12,3 +12,18 @@ tb:
 
 clean:
 	rm -rf ./model_dir/*.png
+
+zi2ziu_prepare:
+	rm -rf ./zi2ziu_experiment
+	mkdir -p ./zi2ziu_sample
+	mkdir -p ./zi2ziu_data
+	mkdir -p ./zi2ziu_experiment
+	python3 font2img.py --dst_font fonts/NotoSansCJK.ttc --src_font fonts/NotoSerifCJK.ttc --sample_dir zi2ziu_sample --mode RGB
+	python3 img2pickle.py --dir zi2ziu_sample --save_dir zi2ziu_data
+	mkdir -p zi2ziu_experiment
+	mv -f zi2ziu_sample zi2ziu_experiment/
+	mv -f zi2ziu_data zi2ziu_experiment/data
+	cp -f font27/* zi2ziu_experiment/
+
+zi2ziu_train:
+	python3 model/zi2ziU.py --experiment_dir zi2ziu_experiment
