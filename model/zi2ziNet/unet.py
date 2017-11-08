@@ -342,8 +342,7 @@ class UNet(object):
         saver.save(self.sess, os.path.join(model_dir, model_name), global_step=step)
 
     def restore_model(self, saver, model_dir):
-
-        ckpt = tf.train.get_checkpoint_state(model_dir)
+        ckpt = tf.train.latest_checkpoint(model_dir)
         if ckpt:
             saver.restore(self.sess, ckpt)
             print("restored model %s" % model_dir)
