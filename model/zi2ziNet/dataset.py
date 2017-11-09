@@ -61,11 +61,10 @@ def get_batch_iter(examples, batch_size, augment, shuffle_pair=False):
             return np.concatenate([img_A, img_B], axis=2)
         finally:
             img.close()
+
     def process_shuffle(img1, img2):
         img1 = bytes_to_file(img1)
         img2 = bytes_to_file(img2)
-        import scipy.misc as misc
-
         try:
             img_A, _ = read_split_image(img1)
             _, img_B = read_split_image(img2)
@@ -89,7 +88,7 @@ def get_batch_iter(examples, batch_size, augment, shuffle_pair=False):
             return np.concatenate([img_A, img_B], axis=2)
         except Exception as e:
             print(e)
-            raise
+            raise e
         finally:
             img1.close()
             img2.close()

@@ -690,12 +690,12 @@ class UNet(object):
 
                 if counter % sample_steps == 0:
                     d_summary, g_summary = self.sess.run([summary_handle.d_merged, summary_handle.g_merged],
-                                  feed_dict={
-                                      real_data: batch_images,
-                                      learning_rate: current_lr,
-                                      no_target_data: batch_images,
-                                      embedding_ids: labels
-                                  })
+                                                         feed_dict={
+                                                             real_data: batch_images,
+                                                             learning_rate: current_lr,
+                                                             no_target_data: batch_images,
+                                                             embedding_ids: labels
+                                                         })
                     summary_writer.add_summary(d_summary, counter)
                     summary_writer.add_summary(g_summary, counter)
 
