@@ -45,7 +45,7 @@ class UNet(object):
         # experiment_dir is needed for training
         if experiment_dir:
             self.data_dir = os.path.join(self.experiment_dir, "data")
-            self.checkpoint_dir = os.path.join(self.experiment_dir, "checkpoint")
+            self.checkpoint_dir = os.path.join(self.experiment_dir, "checkpoints")
             self.sample_dir = os.path.join(self.experiment_dir, "sample")
             self.log_dir = os.path.join(self.experiment_dir, "logs")
 
@@ -261,8 +261,13 @@ class UNet(object):
         g_loss_summary = tf.summary.scalar("g_loss", g_loss)
         tv_loss_summary = tf.summary.scalar("tv_loss", tv_loss)
 
+        real_A_summary = tf.summary.image("real_A", real_A, max_outputs=2)
+        real_B_summary = tf.summary.image("real_B", real_B, max_outputs=2)
+        fake_B_summary = tf.summary.image("fake_B", fake_B, max_outputs=2)
+
         d_merged_summary = tf.summary.merge([d_loss_real_summary, d_loss_fake_summary,
-                                             category_loss_summary, d_loss_summary])
+                                             category_loss_summary, d_loss_summary, real_A_summary, real_B_summary,
+                                             fake_B_summary])
         g_merged_summary = tf.summary.merge([cheat_loss_summary, l1_loss_summary,
                                              fake_category_loss_summary,
                                              const_loss_summary,
@@ -496,7 +501,7 @@ class UNet(object):
             self.sess.run(op)
 
     def train(self, lr=0.0002, epoch=100, schedule=10, resume=True, flip_labels=False,
-              freeze_encoder=False, fine_tune=None, sample_steps=50, checkpoint_steps=500):
+              freeze_encoder=False, fine_tune=None, sample_steps=50, checkpoint_steps=100):
         g_vars, d_vars = self.retrieve_trainable_vars(freeze_encoder=freeze_encoder)
         input_handle, loss_handle, _, summary_handle = self.retrieve_handles()
 
@@ -545,8 +550,7 @@ class UNet(object):
                 if flip_labels:
                     np.random.shuffle(shuffled_ids)
                 # Optimize D
-                _, batch_d_loss, d_summary = self.sess.run([d_optimizer, loss_handle.d_loss,
-                                                            summary_handle.d_merged],
+                _, batch_d_loss, d_summary = self.sess.run([d_optimizer, loss_handle.d_loss],
                                                            feed_dict={
                                                                real_data: batch_images,
                                                                embedding_ids: labels,
@@ -583,9 +587,9 @@ class UNet(object):
                                                                             no_target_ids: shuffled_ids
                                                                         })
                 passed = time.time() - start_time
-                log_format = "Epoch: [%2d], [%4d/%4d] time: %4.4f, d_loss: %.5f, g_loss: %.5f, " + \
+                log_format = "%3d Epoch: [%2d], [%4d/%4d] time: %4.4f, d_loss: %.5f, g_loss: %.5f, " + \
                              "category_loss: %.5f, cheat_loss: %.5f, const_loss: %.5f, l1_loss: %.5f, tv_loss: %.5f"
-                print(log_format % (ei, bid, total_batches, passed, batch_d_loss, batch_g_loss,
+                print(log_format % (counter, ei, bid, total_batches, passed, batch_d_loss, batch_g_loss,
                                     category_loss, cheat_loss, const_loss, l1_loss, tv_loss))
                 summary_writer.add_summary(d_summary, counter)
                 summary_writer.add_summary(g_summary, counter)
@@ -599,7 +603,7 @@ class UNet(object):
                     self.checkpoint(saver, counter)
 
     def trainU(self, lr=0.0002, epoch=100, schedule=10, flip_labels=False,
-              fine_tune=None, sample_steps=50, checkpoint_steps=500):
+               fine_tune=None, sample_steps=50, checkpoint_steps=500):
         # Unsupervised version of zi2zi, modifications on the original train operations are:
         # (1) no embedding IDs, no category loss
         # (2) use pretrained model and freeze the encoders
@@ -629,8 +633,6 @@ class UNet(object):
         saver = tf.train.Saver(max_to_keep=3)
         summary_writer = tf.summary.FileWriter(self.log_dir, self.sess.graph)
 
-
-
         current_lr = lr
         counter = 0
         start_time = time.time()
@@ -648,17 +650,15 @@ class UNet(object):
             for bid, batch in enumerate(train_batch_iter):
                 counter += 1
                 labels, batch_images = batch
-                print(batch_images.shape)
                 # Optimize D
-                _, batch_d_loss, d_summary = self.sess.run([d_optimizer, loss_handle.d_loss,
-                                                            summary_handle.d_merged],
-                                                           feed_dict={
-                                                               real_data: batch_images,
-                                                               learning_rate: current_lr,
-                                                               no_target_data: batch_images,
-                                                               embedding_ids: labels
+                _, batch_d_loss = self.sess.run([d_optimizer, loss_handle.d_loss],
+                                                feed_dict={
+                                                    real_data: batch_images,
+                                                    learning_rate: current_lr,
+                                                    no_target_data: batch_images,
+                                                    embedding_ids: labels
+                                                })
 
-                                                           })
                 # Optimize G
                 _, batch_g_loss = self.sess.run([g_optimizer, loss_handle.g_loss],
                                                 feed_dict={
@@ -671,27 +671,34 @@ class UNet(object):
                 # according to https://github.com/carpedm20/DCGAN-tensorflow
                 # collect all the losses along the way
                 _, batch_g_loss, cheat_loss, \
-                const_loss, tv_loss, g_summary = self.sess.run([g_optimizer,
-                                                                         loss_handle.g_loss,
-                                                                         loss_handle.cheat_loss,
-                                                                         loss_handle.const_loss,
-                                                                         loss_handle.tv_loss,
-                                                                         summary_handle.g_merged],
-                                                                        feed_dict={
-                                                                            real_data: batch_images,
-                                                                            learning_rate: current_lr,
-                                                                            no_target_data: batch_images,
-                                                                            embedding_ids: labels
-                                                                        })
+                const_loss, tv_loss = self.sess.run([g_optimizer,
+                                                     loss_handle.g_loss,
+                                                     loss_handle.cheat_loss,
+                                                     loss_handle.const_loss,
+                                                     loss_handle.tv_loss],
+                                                    feed_dict={
+                                                        real_data: batch_images,
+                                                        learning_rate: current_lr,
+                                                        no_target_data: batch_images,
+                                                        embedding_ids: labels
+                                                    })
                 passed = time.time() - start_time
-                log_format = "Epoch: [%2d], [%4d/%4d] time: %4.4f, d_loss: %.5f, g_loss: %.5f, " + \
+                log_format = "%4d Epoch: [%2d], [%4d/%4d] time: %4.4f, d_loss: %.5f, g_loss: %.5f, " + \
                              "cheat_loss: %.5f, const_loss: %.5f,  tv_loss: %.5f"
-                print(log_format % (ei, bid, total_batches, passed, batch_d_loss, batch_g_loss,
-                                     cheat_loss, const_loss, tv_loss))
-                summary_writer.add_summary(d_summary, counter)
-                summary_writer.add_summary(g_summary, counter)
+                print(log_format % (counter, ei, bid, total_batches, passed, batch_d_loss, batch_g_loss,
+                                    cheat_loss, const_loss, tv_loss))
 
                 if counter % sample_steps == 0:
+                    d_summary, g_summary = self.sess.run([summary_handle.d_merged, summary_handle.g_merged],
+                                  feed_dict={
+                                      real_data: batch_images,
+                                      learning_rate: current_lr,
+                                      no_target_data: batch_images,
+                                      embedding_ids: labels
+                                  })
+                    summary_writer.add_summary(d_summary, counter)
+                    summary_writer.add_summary(g_summary, counter)
+
                     # sample the current model states with val data
                     self.validate_model(val_batch_iter, ei, counter)
 

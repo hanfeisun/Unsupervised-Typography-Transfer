@@ -35,7 +35,7 @@ def draw_single_char(ch, font, canvas_size, x_offset, y_offset, mode="L"):
 
 
 def draw_example(ch, src_font, dst_font, canvas_size, x_offset, y_offset, filter_hashes, mode="L"):
-    dst_img = draw_single_char(ch, dst_font, canvas_size, x_offset, y_offset)
+    dst_img = draw_single_char(ch, dst_font, canvas_size, x_offset, y_offset, mode)
     # check the filter example in the hashes or not
     dst_hash = hash(dst_img.tobytes())
     if dst_hash in filter_hashes:
