@@ -26,8 +26,7 @@ zi2ziu_prepare:
 	cp -f font27/* zi2ziu_experiment/
 
 zi2ziu_train:
-
-	python3 model/zi2ziU.py --experiment_dir zi2ziu_experiment
+	python3 model/zi2ziU.py --experiment_dir zi2ziu_experiment --batch_size 16 --freeze_encoder 0 --lr 0.001
 
 zi2ziu_clean:
 	rm -rf zi2ziu_experiment/logs

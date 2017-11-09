@@ -53,8 +53,6 @@ def inspect_graph():
 
 def main(_):
     config = tf.ConfigProto()
-    config.gpu_options.allow_growth = True
-
     with tf.Session(config=config) as sess:
         model = UNet(args.experiment_dir, batch_size=args.batch_size, experiment_id=args.experiment_id,
                      input_width=args.image_size, output_width=args.image_size, embedding_num=args.embedding_num,
@@ -67,11 +65,11 @@ def main(_):
         model.restore_model(saver, args.experiment_dir)
         inspect_graph()
 
-
         model.trainU(lr=args.lr, epoch=args.epoch,
-                    schedule=args.schedule, fine_tune=None,
-                    sample_steps=args.sample_steps, checkpoint_steps=args.checkpoint_steps,
-                    flip_labels=args.flip_labels)
+                     schedule=args.schedule, fine_tune=None,
+                     sample_steps=args.sample_steps, checkpoint_steps=args.checkpoint_steps,
+                     flip_labels=args.flip_labels,
+                     freeze_encoder=args.freeze_encoder)
 
 
 if __name__ == '__main__':

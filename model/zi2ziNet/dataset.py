@@ -134,7 +134,7 @@ class TrainDataProvider(object):
         training_examples = self.train.examples[:]
         if shuffle:
             np.random.shuffle(training_examples)
-        return get_batch_iter(training_examples, batch_size, augment=True, shuffle_pair=shuffle_pair)
+        return get_batch_iter(training_examples, batch_size, augment=False, shuffle_pair=shuffle_pair)
 
     def get_val_iter(self, batch_size, shuffle=True):
         """
