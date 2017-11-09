@@ -14,7 +14,7 @@ from .utils import scale_back, merge, save_concat_images
 
 # Auxiliary wrapper classes
 # Used to save handles(important nodes in computation graph) for later evaluation
-LossHandle = namedtuple("LossHandle", ["d_loss", "g_loss", "const_loss", "tv_loss"])
+LossHandle = namedtuple("LossHandle", ["d_loss", "g_loss", "const_loss", "tv_loss", "gang_loss"])
 InputHandle = namedtuple("InputHandle", ["real_data", "embedding_ids", "no_target_data", "no_target_ids"])
 EvalHandle = namedtuple("EvalHandle", ["encoder", "generator", "target", "source", "embedding"])
 SummaryHandle = namedtuple("SummaryHandle", ["d_merged", "g_merged"])
@@ -229,6 +229,7 @@ class UNet(object):
         g_loss_summary = tf.summary.scalar("g_loss", g_loss)
         tv_loss_summary = tf.summary.scalar("tv_loss", tv_loss)
         tid_loss_summary = tf.summary.scalar("tid_loss", tid_loss)
+        GANG_loss_summary = tf.summary.scalar("gang_loss", GANG_loss)
         A_summary = tf.summary.image("A", real_A, max_outputs=2)
         B_summary = tf.summary.image("B", real_B, max_outputs=2)
         A_gen_summary = tf.summary.image("A_gen", real_A_gen, max_outputs=2)
@@ -237,6 +238,7 @@ class UNet(object):
         d_merged_summary = tf.summary.merge([
             d_loss_summary])
         g_merged_summary = tf.summary.merge([
+            GANG_loss_summary,
             const_loss_summary,
             g_loss_summary, tv_loss_summary, tid_loss_summary,
             A_summary, B_summary,
@@ -251,7 +253,9 @@ class UNet(object):
         loss_handle = LossHandle(d_loss=d_loss,
                                  g_loss=g_loss,
                                  const_loss=const_loss,
-                                 tv_loss=tv_loss)
+                                 tv_loss=tv_loss,
+                                 gang_loss=GANG_loss
+                                 )
 
         eval_handle = EvalHandle(encoder=encoded_real_A,
                                  generator=real_A_gen,
@@ -467,7 +471,7 @@ class UNet(object):
             self.sess.run(op)
 
     def trainU(self, lr=0.0002, epoch=100, schedule=10, flip_labels=False,
-               fine_tune=None, sample_steps=50, checkpoint_steps=500, freeze_encoder=True):
+               fine_tune=None, sample_steps=20, checkpoint_steps=200, freeze_encoder=True):
         # Unsupervised version of zi2zi, modifications on the original train operations are:
         # (1) no embedding IDs, no category loss
         # (2) use pretrained model and freeze the encoders
@@ -513,6 +517,7 @@ class UNet(object):
 
             for bid, batch in enumerate(train_batch_iter):
                 counter += 1
+                print(counter)
                 labels, batch_images = batch
                 # Optimize D
                 _, batch_d_loss = self.sess.run([d_optimizer, loss_handle.d_loss],
@@ -541,13 +546,13 @@ class UNet(object):
                 summary_writer.add_summary(d_summary, counter)
                 summary_writer.add_summary(g_summary, counter)
 
-                # if counter % sample_steps == 0:
-                #
-                #
-                #     # sample the current model states with val data
-                #     self.validate_model(val_batch_iter, ei, counter)
+                if counter % sample_steps == 1:
 
-                if counter % checkpoint_steps == 0:
+
+                    # sample the current model states with val data
+                    self.validate_model(val_batch_iter, ei, counter)
+
+                if counter % checkpoint_steps == 1:
                     print("Checkpoint: save checkpoint step %d" % counter)
                     self.checkpoint(saver, counter)
         # save the last checkpoint
