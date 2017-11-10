@@ -75,3 +75,7 @@ def compile_frames_to_gif(frame_dir, gif_file):
     images = [misc.imresize(imageio.imread(f), interp='nearest', size=0.33) for f in frames]
     imageio.mimsave(gif_file, images, duration=0.1)
     return gif_file
+
+
+def l2_loss(a, b):
+    return np.average(np.square(a - b))
