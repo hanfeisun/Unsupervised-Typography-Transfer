@@ -10,7 +10,7 @@ import time
 from collections import namedtuple
 from .ops import conv2d, deconv2d, lrelu, fc, batch_norm, init_embedding, conditional_instance_norm
 from .dataset import TrainDataProvider, InjectDataProvider, NeverEndingLoopingProvider
-from .utils import scale_back, merge, save_concat_images
+from .utils import scale_back, merge, save_concat_images, l2_loss
 
 # Auxiliary wrapper classes
 # Used to save handles(important nodes in computation graph) for later evaluation
@@ -343,10 +343,12 @@ class UNet(object):
     def validate_model(self, val_iter, epoch, step):
         labels, images = next(val_iter)
         fake_imgs, real_imgs, d_loss, g_loss = self.generate_fake_samples(images, labels)
-        print("Sample: d_loss: %.5f, g_loss: %.5f" % (d_loss, g_loss))
 
         merged_fake_images = merge(scale_back(fake_imgs), [self.batch_size, 1])
         merged_real_images = merge(scale_back(real_imgs), [self.batch_size, 1])
+        l2_los = l2_loss(merged_fake_images, merged_real_images)
+        print("Sample: d_loss: %.5f, g_loss: %.5f, l2_loss: %.5f" % (d_loss, g_loss, l2_los))
+
         merged_pair = np.concatenate([merged_real_images, merged_fake_images], axis=1)
 
         model_id, _ = self.get_model_id_and_dir()
