@@ -100,6 +100,7 @@ def model_fn(features, labels, mode, params):
 
     else:
         # EVAL
+        tf.summary.scalar("cross_entropy_loss", pixel_loss)
         tf.summary.image("eval_original", features['source'], max_outputs=10)
         tf.summary.image("eval_target", features['target'], max_outputs=10)
         tf.summary.image("eval_transfer_sigmoid", generated, max_outputs=10)
