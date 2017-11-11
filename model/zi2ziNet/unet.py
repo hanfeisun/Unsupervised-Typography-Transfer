@@ -47,6 +47,9 @@ class UNet(object):
             self.checkpoint_dir = os.path.join(self.experiment_dir, "checkpoints")
             self.sample_dir = os.path.join(self.experiment_dir, "sample")
             self.log_dir = os.path.join(self.experiment_dir, "logs")
+            val_loss_file_name = os.path.join(self.log_dir, "val_loss") \
+                + " " + time.strftime("%Y-%m-%d %H-%M-%S", time.gmtime())
+            self.val_loss_file = open(val_loss_file_name, "w")
 
             if not os.path.exists(self.checkpoint_dir):
                 os.makedirs(self.checkpoint_dir)
@@ -347,7 +350,11 @@ class UNet(object):
         merged_fake_images = merge(scale_back(fake_imgs), [self.batch_size, 1])
         merged_real_images = merge(scale_back(real_imgs), [self.batch_size, 1])
         l2_los = l2_loss(merged_fake_images, merged_real_images)
-        print("Sample: d_loss: %.5f, g_loss: %.5f, l2_loss: %.5f" % (d_loss, g_loss, l2_los))
+        msg = "Sample: epoch: %d, d_loss: %.5f, g_loss: %.5f, l2_loss: %.5f" % \
+            (epoch, d_loss, g_loss, l2_los)
+        print(msg)
+        self.val_loss_file.write(msg)
+        self.val_loss_file.flush()
 
         merged_pair = np.concatenate([merged_real_images, merged_fake_images], axis=1)
 
