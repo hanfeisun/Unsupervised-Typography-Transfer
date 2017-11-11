@@ -124,16 +124,25 @@ def model_fn(features, labels, mode, params):
     g_train = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(g_loss, var_list=theta_g,
                                                                            global_step=tf.train.get_global_step())
 
-    logging_hook = tf.train.LoggingTensorHook({"g_loss": g_loss, "d_loss": d_loss}, every_n_iter=100)
-    summary_hook = tf.train.SummarySaverHook(
+    train_logging_hook = tf.train.LoggingTensorHook(
+        {"g_loss": g_loss, "d_loss": d_loss, "cross_entropy_loss": pixel_loss}, every_n_iter=100)
+    train_summary_hook = tf.train.SummarySaverHook(
         save_steps=10,
         output_dir="./board",
         summary_op=tf.summary.merge_all())
+
+    eval_logging_hook = tf.train.LoggingTensorHook({"cross_entropy_loss": loss}, every_n_iter=100)
+    eval_summary_hook = tf.train.SummarySaverHook(
+        save_steps=10,
+        output_dir="./board_eval",
+        summary_op=tf.summary.merge_all()
+    )
 
     return tf.estimator.EstimatorSpec(
         mode=mode,
         loss=loss,
         train_op=tf.group(d_train, g_train),
         eval_metric_ops=None,
-        training_hooks=[logging_hook, summary_hook]
+        training_hooks=[train_logging_hook, train_summary_hook],
+        evaluation_hooks=[eval_logging_hook, eval_summary_hook]
     )
