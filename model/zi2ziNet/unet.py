@@ -47,9 +47,6 @@ class UNet(object):
             self.checkpoint_dir = os.path.join(self.experiment_dir, "checkpoints")
             self.sample_dir = os.path.join(self.experiment_dir, "sample")
             self.log_dir = os.path.join(self.experiment_dir, "logs")
-            val_loss_file_name = os.path.join(self.log_dir, "val_loss") \
-                + " " + time.strftime("%Y-%m-%d %H-%M-%S", time.gmtime())
-            self.val_loss_file = open(val_loss_file_name, "w")
 
             if not os.path.exists(self.checkpoint_dir):
                 os.makedirs(self.checkpoint_dir)
@@ -60,6 +57,10 @@ class UNet(object):
             if not os.path.exists(self.sample_dir):
                 os.makedirs(self.sample_dir)
                 print("create sample directory")
+
+            val_loss_file_name = os.path.join(self.log_dir, "val_loss") \
+                + " " + time.strftime("%Y-%m-%d %H-%M-%S", time.gmtime())
+            self.val_loss_file = open(val_loss_file_name, "w")
 
     def encoder(self, images, is_training, reuse=False):
         with tf.variable_scope("generator"):
