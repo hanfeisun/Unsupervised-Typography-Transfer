@@ -353,7 +353,7 @@ class UNet(object):
         msg = "Sample: epoch: %d, d_loss: %.5f, g_loss: %.5f, l2_loss: %.5f" % \
             (epoch, d_loss, g_loss, l2_los)
         print(msg)
-        self.val_loss_file.write(msg)
+        self.val_loss_file.write(msg + '\n')
         self.val_loss_file.flush()
 
         merged_pair = np.concatenate([merged_real_images, merged_fake_images], axis=1)
