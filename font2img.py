@@ -109,8 +109,10 @@ args = parser.parse_args()
 if __name__ == "__main__":
     if args.charset in ['CN', 'JP', 'KR', 'CN_T']:
         charset = locals().get("%s_CHARSET" % args.charset)
+
     else:
-        charset = [c for c in open(args.charset).readline()[:-1].decode("utf-8")]
+        charset = [c for c in open(args.charset).readline()[:-1]]
+
     if args.shuffle:
         np.random.shuffle(charset)
     font2img(args.src_font, args.dst_font, charset, args.char_size,

@@ -401,7 +401,7 @@ class UNet(object):
             fake_imgs = self.generate_fake_samples(source_imgs, labels)[0]
             merged_fake_images = merge(scale_back(fake_imgs), [self.batch_size, 1])
             merged_source_images = merge(scale_back(source_imgs[:, :, :, :self.input_filters]), [self.batch_size, 1])
-            merged_target_images = merge(scale_back(source_imgs[:, :, :, :self.input_filters:self.input_filters + self.output_filters]), [self.batch_size, 1])
+            merged_target_images = merge(scale_back(source_imgs[:, :, :, self.input_filters:self.input_filters + self.output_filters]), [self.batch_size, 1])
 
             batch_buffer.append(merged_fake_images)
             source_batch_buffer.append(merged_source_images)
@@ -418,7 +418,7 @@ class UNet(object):
             # last batch
             save_imgs(batch_buffer, count)
             save_imgs(source_batch_buffer, count, suffix="_src")
-            save_imgs(source_batch_buffer, count, suffix="_tgt")
+            save_imgs(target_batch_buffer, count, suffix="_tgt")
 
     def interpolate(self, source_obj, between, model_dir, save_dir, steps):
         tf.global_variables_initializer().run()
