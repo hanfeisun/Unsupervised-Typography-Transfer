@@ -388,24 +388,37 @@ class UNet(object):
         saver = tf.train.Saver(var_list=self.retrieve_generator_vars())
         self.restore_model(saver, model_dir)
 
-        def save_imgs(imgs, count):
-            p = os.path.join(save_dir, "inferred_%04d.png" % count)
+        def save_imgs(imgs, count, suffix=""):
+            p = os.path.join(save_dir, "inferred_%04d%s.png" % (count, suffix))
             save_concat_images(imgs, img_path=p)
             print("generated images saved at %s" % p)
 
         count = 0
         batch_buffer = list()
+        source_batch_buffer = list()
+        target_batch_buffer = list()
         for labels, source_imgs in source_iter:
             fake_imgs = self.generate_fake_samples(source_imgs, labels)[0]
             merged_fake_images = merge(scale_back(fake_imgs), [self.batch_size, 1])
+            merged_source_images = merge(scale_back(source_imgs[:, :, :, :self.input_filters]), [self.batch_size, 1])
+            merged_target_images = merge(scale_back(source_imgs[:, :, :, :self.input_filters:self.input_filters + self.output_filters]), [self.batch_size, 1])
+
             batch_buffer.append(merged_fake_images)
+            source_batch_buffer.append(merged_source_images)
+            target_batch_buffer.append(merged_target_images)
             if len(batch_buffer) == 10:
                 save_imgs(batch_buffer, count)
+                save_imgs(source_batch_buffer, count, suffix="_src")
+                save_imgs(target_batch_buffer, count, suffix="_tgt")
                 batch_buffer = list()
+                source_batch_buffer = list()
+                target_batch_buffer = list()
             count += 1
         if batch_buffer:
             # last batch
             save_imgs(batch_buffer, count)
+            save_imgs(source_batch_buffer, count, suffix="_src")
+            save_imgs(source_batch_buffer, count, suffix="_tgt")
 
     def interpolate(self, source_obj, between, model_dir, save_dir, steps):
         tf.global_variables_initializer().run()

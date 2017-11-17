@@ -79,3 +79,4 @@ def compile_frames_to_gif(frame_dir, gif_file):
 
 def l2_loss(a, b):
     return np.average((a - b) ** 2)
+
