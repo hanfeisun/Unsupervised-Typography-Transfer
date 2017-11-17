@@ -29,7 +29,9 @@ from subprocess import call
 def main(_):
     config = tf.ConfigProto()
     with open("./infer_charset", "w") as f:
+        print(args.text)
         if not args.text:
+            raise
             f.write("あのイーハトーヴォのすきとおった風、夏でも底に冷たさをもつ青いそら、うつくしい森で飾られたモーリオ市、郊外のぎらぎらひかる草の波。")
             f.write("동해물과、백두산이、마르고닳도록、하느님이、보우하사。")
             f.write("南去經三國，東來過五湖。")
@@ -37,7 +39,8 @@ def main(_):
             f.write("ABCDEFGHIJKLM")
             f.write("\n")
         else:
-            f.write(args.text + "\n")
+            f.write(args.text + "                      \n")
+
 
     call(
         "mkdir -p zi2ziu_infer_sample",
@@ -54,7 +57,7 @@ def main(_):
     with tf.Session(config=config) as sess:
         model = UNet()
         model.register_session(sess)
-        model.build_model()
+        model.build_model(is_training=False)
         tf.global_variables_initializer().run()
         model.infer(source_obj="./zi2ziu_infer_sample/val.obj", model_dir=args.checkpoint,
                     embedding_ids=[0], save_dir="./inferred/")

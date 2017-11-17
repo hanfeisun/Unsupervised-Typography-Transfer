@@ -114,11 +114,18 @@ class UNet(object):
                     dec = tf.nn.dropout(dec, 0.5)
                 if do_concat:
                     dec = tf.concat([dec, enc_layer], 3)
+                print(dec.shape)
+
                 return dec
+
+
 
             d1 = decode_layer(encoded, s128, self.generator_dim * 8, layer=1, enc_layer=encoding_layers["e7"],
                               dropout=True)
+
             d2 = decode_layer(d1, s64, self.generator_dim * 8, layer=2, enc_layer=encoding_layers["e6"], dropout=True)
+
+
             d3 = decode_layer(d2, s32, self.generator_dim * 8, layer=3, enc_layer=encoding_layers["e5"], dropout=True)
             d4 = decode_layer(d3, s16, self.generator_dim * 8, layer=4, enc_layer=encoding_layers["e4"])
             d5 = decode_layer(d4, s8, self.generator_dim * 4, layer=5, enc_layer=encoding_layers["e3"])
@@ -400,8 +407,8 @@ class UNet(object):
         for labels, source_imgs in source_iter:
             fake_imgs = self.generate_fake_samples(source_imgs, labels)[0]
             merged_fake_images = merge(scale_back(fake_imgs), [self.batch_size, 1])
-            merged_source_images = merge(scale_back(source_imgs[:, :, :, :self.input_filters]), [self.batch_size, 1])
-            merged_target_images = merge(scale_back(source_imgs[:, :, :, self.input_filters:self.input_filters + self.output_filters]), [self.batch_size, 1])
+            merged_target_images= merge(scale_back(source_imgs[:, :, :, :self.input_filters]), [self.batch_size, 1])
+            merged_source_images = merge(scale_back(source_imgs[:, :, :, self.input_filters:self.input_filters + self.output_filters]), [self.batch_size, 1])
 
             batch_buffer.append(merged_fake_images)
             source_batch_buffer.append(merged_source_images)
