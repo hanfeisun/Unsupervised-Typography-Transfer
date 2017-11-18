@@ -29,21 +29,19 @@ from subprocess import call
 def main(_):
     config = tf.ConfigProto()
     with open("./infer_charset", "w") as f:
-        print(args.text)
-        if not args.text:
-            raise
-            f.write("あのイーハトーヴォのすきとおった風、夏でも底に冷たさをもつ青いそら、うつくしい森で飾られたモーリオ市、郊外のぎらぎらひかる草の波。")
-            f.write("동해물과、백두산이、마르고닳도록、하느님이、보우하사。")
-            f.write("南去經三國，東來過五湖。")
-            f.write("天地玄黃、宇宙洪荒。")
-            f.write("ABCDEFGHIJKLM")
-            f.write("\n")
-        else:
-            f.write(args.text + "                      \n")
+        if args.text:
+            f.write(args.text)
+        f.write("南去經三國，東來過五湖。")
+        f.write("︽永東國酬愛鬱靈鷹袋︾")
+        f.write("あのイーハトーヴォのすきとおった風、夏でも底に冷たさをもつ青いそら、うつくしい森で飾られたモーリオ市、郊外のぎらぎらひかる草の波。")
+        f.write("동해물과、백두산이、마르고닳도록、하느님이、보우하사。")
+        f.write("ABCDEFGHIJKLM")
+        f.write("\n")
+
 
 
     call(
-        "mkdir -p zi2ziu_infer_sample",
+        "rm -rf zi2ziu_infer_sample && mkdir -p zi2ziu_infer_sample",
         shell=True)
     call(
         "python3 font2img.py --src_font fonts/NotoSansCJK.ttc --dst_font fonts/NotoSerifCJK.ttc --sample_dir zi2ziu_infer_sample --mode RGB  --charset infer_charset",
