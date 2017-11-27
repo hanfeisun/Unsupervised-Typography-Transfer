@@ -18,7 +18,7 @@ zi2ziu_prepare:
 	mkdir -p ./zi2ziu_sample
 	mkdir -p ./zi2ziu_data
 	mkdir -p ./zi2ziu_experiment
-	python3 font2img.py --src_font fonts/NotoSansCJK.ttc --dst_font fonts/NotoSerifCJK.ttc --sample_dir zi2ziu_sample --mode RGB
+	python3 font2img.py --src_font fonts/NotoSansCJK.ttc --dst_font fonts/NotoSerifCJK.ttc --sample_dir zi2ziu_sample --mode L
 	python3 img2pickle.py --dir zi2ziu_sample --save_dir zi2ziu_data
 	mkdir -p zi2ziu_experiment
 	mv -f zi2ziu_sample zi2ziu_experiment/
