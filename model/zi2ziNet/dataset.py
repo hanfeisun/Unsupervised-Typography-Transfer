@@ -152,7 +152,7 @@ class TrainDataProvider(object):
         if shuffle:
             np.random.shuffle(val_examples)
         while True:
-            val_batch_iter = get_batch_iter(val_examples, batch_size)
+            val_batch_iter = get_batch_iter(val_examples, batch_size, augment=False)
             for labels, examples in val_batch_iter:
                 yield labels, examples
 
