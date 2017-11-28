@@ -27,16 +27,33 @@ def load_global_charset():
     CN_T_CHARSET = cjk["gb2312_t"]
 
 
-def draw_single_char(ch, font, canvas_size, x_offset, y_offset):
+import logging
 
+
+def _get_gb2312_characters():
+    # equivalent to level 2 of GBK
+    higher_range = range(0xb0, 0xf7 + 1)
+    lower_range = range(0xa1, 0xfe + 1)
+    for higher in higher_range:
+        for lower in lower_range:
+            encoding = (higher << 8) | lower
+            try:
+                yield encoding.to_bytes(2, byteorder='big').decode(encoding='gb2312')
+            except UnicodeDecodeError:
+                hex_literal = '0x' + ''.join('%02x' % byte for byte in encoding.to_bytes(2, byteorder='big'))
+                logging.warning('Unable to decode %s with GB2312' % hex_literal)
+                pass
+
+
+def draw_single_char(ch, font, canvas_size, x_offset, y_offset):
     img = Image.new("RGB", (canvas_size, canvas_size), (255, 255, 255))
     draw = ImageDraw.Draw(img)
     draw.text((x_offset, y_offset), ch, (0, 0, 0), font=font)
     return img
 
 
-def draw_example(ch, src_font, dst_font, canvas_size, x_offset, y_offset, filter_hashes, mode="L"):
-    dst_img = draw_single_char(ch, dst_font, canvas_size, x_offset, y_offset)
+def draw_example(ch, src_font, dst_font, canvas_size, x_offset, y_offset, tgt_x_offset, tgt_y_offset, filter_hashes, mode="L"):
+    dst_img = draw_single_char(ch, dst_font, canvas_size, tgt_x_offset, tgt_y_offset)
     # check the filter example in the hashes or not
     dst_hash = hash(dst_img.tobytes())
     if dst_hash in filter_hashes:
@@ -64,7 +81,14 @@ def filter_recurring_hash(charset, font, canvas_size, x_offset, y_offset):
 
 
 def font2img(src, dst, charset, char_size, canvas_size,
-             x_offset, y_offset, sample_count, sample_dir, label=0, filter_by_hash=True, mode="L"):
+             x_offset, y_offset, sample_count, sample_dir, label=0, filter_by_hash=True, mode="L",
+             target_x_offset=None, target_y_offset=None):
+    if target_x_offset is None:
+        target_x_offset = x_offset
+
+    if target_y_offset is None:
+        target_y_offset = y_offset
+
     src_font = ImageFont.truetype(src, size=char_size)
     dst_font = ImageFont.truetype(dst, size=char_size)
 
@@ -78,7 +102,8 @@ def font2img(src, dst, charset, char_size, canvas_size,
     for c in charset:
         if count == sample_count:
             break
-        e = draw_example(c, src_font, dst_font, canvas_size, x_offset, y_offset, filter_hashes, mode)
+        e = draw_example(c, src_font, dst_font, canvas_size, x_offset, y_offset, target_x_offset, target_y_offset,
+                         filter_hashes, mode)
         if e:
             e.save(os.path.join(sample_dir, "%d_%04d.png" % (label, count)))
             count += 1
@@ -96,18 +121,22 @@ parser.add_argument('--charset', dest='charset', type=str, default='CN',
 parser.add_argument('--shuffle', dest='shuffle', type=int, default=0, help='shuffle a charset before processings')
 parser.add_argument('--char_size', dest='char_size', type=int, default=150, help='character size')
 parser.add_argument('--canvas_size', dest='canvas_size', type=int, default=256, help='canvas size')
-parser.add_argument('--x_offset', dest='x_offset', type=int, default=20, help='x offset')
-parser.add_argument('--y_offset', dest='y_offset', type=int, default=20, help='y_offset')
+parser.add_argument('--x_offset', dest='x_offset', type=int, default=20, help='source font x offset')
+parser.add_argument('--y_offset', dest='y_offset', type=int, default=20, help='source font y_offset')
+parser.add_argument('--tgt_x_offset', dest='tgt_x_offset', type=int, default=20, help='target font x offset')
+parser.add_argument('--tgt_y_offset', dest='tgt_y_offset', type=int, default=20, help='target font y_offset')
+
 parser.add_argument('--sample_count', dest='sample_count', type=int, default=1000, help='number of characters to draw')
 parser.add_argument('--sample_dir', dest='sample_dir', default='sample_dir', help='directory to save examples')
 parser.add_argument('--label', dest='label', type=int, default=0, help='label as the prefix of examples')
 parser.add_argument('--mode', dest='mode', choices=["L", "RGB"], default="L", help='mode for image, RGB or L')
 
-
 args = parser.parse_args()
 
 if __name__ == "__main__":
-    if args.charset in ['CN', 'JP', 'KR', 'CN_T']:
+    if args.charset in ['GB2312']:
+        charset = list(_get_gb2312_characters())
+    elif args.charset in ['CN', 'JP', 'KR', 'CN_T']:
         charset = locals().get("%s_CHARSET" % args.charset)
 
     else:
@@ -117,4 +146,4 @@ if __name__ == "__main__":
         np.random.shuffle(charset)
     font2img(args.src_font, args.dst_font, charset, args.char_size,
              args.canvas_size, args.x_offset, args.y_offset,
-             args.sample_count, args.sample_dir, args.label, args.filter, args.mode)
+             args.sample_count, args.sample_dir, args.label, args.filter, args.mode, args.tgt_x_offset, args.tgt_y_offset)
