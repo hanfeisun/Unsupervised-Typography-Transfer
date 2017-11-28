@@ -69,7 +69,7 @@ def main(_):
                      schedule=args.schedule, fine_tune=None,
                      sample_steps=args.sample_steps, checkpoint_steps=args.checkpoint_steps,
                      flip_labels=args.flip_labels,
-                     freeze_encoder=args.freeze_encoder)
+                     freeze_encoder=args.freeze_encoder, augment=True)
 
 
 if __name__ == '__main__':

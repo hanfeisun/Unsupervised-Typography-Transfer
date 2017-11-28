@@ -47,7 +47,7 @@ def get_batch_iter(examples, batch_size, augment, shuffle_pair=False):
                 # 2) random crop the image back to its original size
                 # NOTE: image A and B needs to be in sync as how much
                 # to be shifted
-                w, h, _ = img_A.shape
+                w, h = img_A.shape
                 multiplier = random.uniform(1.00, 1.20)
                 # add an eps to prevent cropping issue
                 nw = int(multiplier * w) + 1
@@ -78,7 +78,7 @@ def get_batch_iter(examples, batch_size, augment, shuffle_pair=False):
                 # 2) random crop the image back to its original size
                 # NOTE: image A and B needs to be in sync as how much
                 # to be shifted
-                w, h, _ = img_A.shape
+                w, h = img_A.shape
                 multiplier = random.uniform(1.00, 1.20)
                 # add an eps to prevent cropping issue
                 nw = int(multiplier * w) + 1
@@ -138,11 +138,11 @@ class TrainDataProvider(object):
             self.val.examples = filter(lambda e: e[0] in self.filter_by, self.val.examples)
         print("train examples -> %d, val examples -> %d" % (len(self.train.examples), len(self.val.examples)))
 
-    def get_train_iter(self, batch_size, shuffle=True, shuffle_pair=False):
+    def get_train_iter(self, batch_size, shuffle=True, shuffle_pair=False, augment=False):
         training_examples = self.train.examples[:]
         if shuffle:
             np.random.shuffle(training_examples)
-        return get_batch_iter(training_examples, batch_size, augment=False, shuffle_pair=shuffle_pair)
+        return get_batch_iter(training_examples, batch_size, augment=augment, shuffle_pair=shuffle_pair)
 
     def get_val_iter(self, batch_size, shuffle=True):
         """
@@ -152,7 +152,7 @@ class TrainDataProvider(object):
         if shuffle:
             np.random.shuffle(val_examples)
         while True:
-            val_batch_iter = get_batch_iter(val_examples, batch_size, augment=False)
+            val_batch_iter = get_batch_iter(val_examples, batch_size)
             for labels, examples in val_batch_iter:
                 yield labels, examples
 

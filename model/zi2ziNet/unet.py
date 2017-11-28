@@ -501,7 +501,7 @@ class UNet(object):
             self.sess.run(op)
 
     def trainU(self, lr=0.0002, epoch=100, schedule=10, flip_labels=False,
-               fine_tune=None, sample_steps=20, checkpoint_steps=200, freeze_encoder=True):
+               fine_tune=None, sample_steps=20, checkpoint_steps=200, freeze_encoder=True, augment=False):
         # Unsupervised version of zi2zi, modifications on the original train operations are:
         # (1) no embedding IDs, no category loss
         # (2) use pretrained model and freeze the encoders
@@ -536,7 +536,7 @@ class UNet(object):
         start_time = time.time()
 
         for ei in range(epoch):
-            train_batch_iter = data_provider.get_train_iter(self.batch_size, shuffle_pair=True)
+            train_batch_iter = data_provider.get_train_iter(self.batch_size, shuffle_pair=True, augment=augment)
 
             if (ei + 1) % schedule == 0:
                 update_lr = current_lr / 2.0

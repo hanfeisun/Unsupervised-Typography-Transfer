@@ -38,8 +38,20 @@ zi2ziu_prepare:
 	mv -f zi2ziu_data zi2ziu_experiment/data
 	cp -f font27/* zi2ziu_experiment/
 
+zi2ziu_prepare_xingkai:
+	rm -rf ./zi2ziu_experiment
+	mkdir -p ./zi2ziu_sample
+	mkdir -p ./zi2ziu_data
+	mkdir -p ./zi2ziu_experiment
+	python3 font2img.py --src_font fonts/NotoSansCJK.ttc --dst_font fonts/XingKai.ttf --sample_dir zi2ziu_sample --mode L --tgt_y_offset 45 --charset GB2312
+	python3 img2pickle.py --dir zi2ziu_sample --save_dir zi2ziu_data
+	mkdir -p zi2ziu_experiment
+	mv -f zi2ziu_sample zi2ziu_experiment/
+	mv -f zi2ziu_data zi2ziu_experiment/data
+	cp -f font27/* zi2ziu_experiment/
+
 zi2ziu_train:
-	python3 model/zi2ziU.py --experiment_dir zi2ziu_experiment --batch_size 16 --freeze_encoder 0 --lr 0.001
+	python3 model/zi2ziU.py --experiment_dir zi2ziu_experiment --batch_size 16 --freeze_encoder 0 --lr 0.001 --Ltv_penalty 0.1
 
 zi2ziu_clean:
 	rm -rf zi2ziu_experiment/logs
