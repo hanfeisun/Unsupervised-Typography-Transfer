@@ -58,6 +58,10 @@ def get_batch_iter(examples, batch_size, augment, shuffle_pair=False):
                 img_B = shift_and_resize_image(img_B, shift_x, shift_y, nw, nh)
             img_A = normalize_image(img_A)
             img_B = normalize_image(img_B)
+            if len(img_A.shape) == 2:
+                img_A = np.expand_dims(img_A, 2)
+                img_B = np.expand_dims(img_B, 2)
+
             return np.concatenate([img_A, img_B], axis=2)
         finally:
             img.close()
@@ -83,8 +87,12 @@ def get_batch_iter(examples, batch_size, augment, shuffle_pair=False):
                 shift_y = int(np.ceil(np.random.uniform(0.01, nh - h)))
                 img_A = shift_and_resize_image(img_A, shift_x, shift_y, nw, nh)
                 img_B = shift_and_resize_image(img_B, shift_x, shift_y, nw, nh)
+
             img_A = normalize_image(img_A)
             img_B = normalize_image(img_B)
+            if len(img_A.shape) == 2:
+                img_A = np.expand_dims(img_A, 2)
+                img_B = np.expand_dims(img_B, 2)
             return np.concatenate([img_A, img_B], axis=2)
         except Exception as e:
             print(e)
