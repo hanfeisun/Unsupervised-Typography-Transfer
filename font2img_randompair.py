@@ -52,13 +52,14 @@ def draw_single_char(ch, font, canvas_size, x_offset, y_offset):
     return img
 
 
-def draw_example(ch, src_font, dst_font, canvas_size, x_offset, y_offset, dst_x_offset, dst_y_offset, filter_hashes, mode="L"):
-    dst_img = draw_single_char(ch, dst_font, canvas_size, dst_x_offset, dst_y_offset)
+def draw_example(src_ch, dst_ch, src_font, dst_font, canvas_size, x_offset, y_offset, dst_x_offset, dst_y_offset, filter_hashes,
+                 mode="L"):
+    dst_img = draw_single_char(dst_ch, dst_font, canvas_size, dst_x_offset, dst_y_offset)
     # check the filter example in the hashes or not
     dst_hash = hash(dst_img.tobytes())
     if dst_hash in filter_hashes:
         return None
-    src_img = draw_single_char(ch, src_font, canvas_size, x_offset, y_offset)
+    src_img = draw_single_char(src_ch, src_font, canvas_size, x_offset, y_offset)
     example_img = Image.new(mode, (canvas_size * 2, canvas_size), (255, 255, 255))
     example_img.paste(dst_img, (0, 0))
     example_img.paste(src_img, (canvas_size, 0))
@@ -82,7 +83,7 @@ def filter_recurring_hash(charset, font, canvas_size, x_offset, y_offset):
 
 def font2img(src, dst, charset, char_size, canvas_size,
              x_offset, y_offset, sample_count, sample_dir, label=0, filter_by_hash=True, mode="L",
-             target_x_offset=None, target_y_offset=None, target_char_size=None):
+             target_x_offset=None, target_y_offset=None, target_char_size=None, overlap=1.0):
     if target_x_offset is None:
         target_x_offset = x_offset
 
@@ -100,12 +101,28 @@ def font2img(src, dst, charset, char_size, canvas_size,
         filter_hashes = set(filter_recurring_hash(charset, dst_font, canvas_size, x_offset, y_offset))
         print("filter hashes -> %s" % (",".join([str(h) for h in filter_hashes])))
 
-    count = 0
 
-    for c in charset:
+    charset_size = len(charset)
+
+    set_A_size = sample_count
+    set_B_size = int((1.0 - overlap) * sample_count)
+    set_C_size = set_A_size - set_B_size
+
+    if set_A_size + set_B_size > charset_size:
+        raise ValueError("charset size not large enough")
+
+    print("charset size is %s, sample size is %s, overlap ratio is %s" %(charset_size, sample_count, overlap))
+
+    charset_src = charset[:set_A_size]
+    charset_dst = charset[:set_C_size] + charset[-set_B_size:]
+
+
+
+    count = 0
+    for src_char, dst_char in zip(charset_src, charset_dst):
         if count == sample_count:
             break
-        e = draw_example(c, src_font, dst_font, canvas_size, x_offset, y_offset, target_x_offset, target_y_offset,
+        e = draw_example(src_char,dst_char, src_font, dst_font, canvas_size, x_offset, y_offset, target_x_offset, target_y_offset,
                          filter_hashes, mode)
         if e:
             e.save(os.path.join(sample_dir, "%d_%04d.png" % (label, count)))
@@ -134,8 +151,7 @@ parser.add_argument('--sample_count', dest='sample_count', type=int, default=100
 parser.add_argument('--sample_dir', dest='sample_dir', default='sample_dir', help='directory to save examples')
 parser.add_argument('--label', dest='label', type=int, default=0, help='label as the prefix of examples')
 parser.add_argument('--mode', dest='mode', choices=["L", "RGB"], default="L", help='mode for image, RGB or L')
-
-
+parser.add_argument('--overlap', dest='overlap', type=float, default=1.0, help='overlap ratio')
 
 args = parser.parse_args()
 
@@ -152,4 +168,5 @@ if __name__ == "__main__":
         np.random.shuffle(charset)
     font2img(args.src_font, args.dst_font, charset, args.char_size,
              args.canvas_size, args.x_offset, args.y_offset,
-             args.sample_count, args.sample_dir, args.label, args.filter, args.mode, args.tgt_x_offset, args.tgt_y_offset, args.tgt_char_size)
+             args.sample_count, args.sample_dir, args.label, args.filter, args.mode, args.tgt_x_offset,
+             args.tgt_y_offset, args.tgt_char_size, args.overlap)

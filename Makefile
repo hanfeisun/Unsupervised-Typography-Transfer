@@ -16,6 +16,15 @@ sample_xingkai:
 	--char_size 48 --x_offset 0 --y_offset 0 --shuffle 1 --mode L  --charset GB2312 --tgt_x_offset 0 --tgt_y_offset 5 --tgt_char_size 60 --sample_count 3000
 	python3 img2pickle.py --dir sample_dir --save_dir model_dir
 
+sample_xingkai_randompair:
+	rm -rf ./sample_dir
+	rm -rf ./model_dir
+	mkdir ./sample_dir
+	mkdir ./model_dir
+	python3 font2img_randompair.py --src_font fonts/NotoSansCJK.ttc --dst_font fonts/XingKai.ttf --canvas_size 64  \
+	--char_size 48 --x_offset 0 --y_offset 0 --shuffle 1 --mode L  --charset GB2312 --tgt_x_offset 0 --tgt_y_offset 5 --tgt_char_size 60 --sample_count 3000 --overlap 0
+	python3 img2pickle.py --dir sample_dir --save_dir model_dir
+
 tb:
 	rm -rf board/* && tensorboard --logdir=board
 
