@@ -82,15 +82,18 @@ def filter_recurring_hash(charset, font, canvas_size, x_offset, y_offset):
 
 def font2img(src, dst, charset, char_size, canvas_size,
              x_offset, y_offset, sample_count, sample_dir, label=0, filter_by_hash=True, mode="L",
-             target_x_offset=None, target_y_offset=None):
+             target_x_offset=None, target_y_offset=None, target_char_size=None):
     if target_x_offset is None:
         target_x_offset = x_offset
 
     if target_y_offset is None:
         target_y_offset = y_offset
 
+    if target_char_size is None:
+        target_char_size = char_size
+
     src_font = ImageFont.truetype(src, size=char_size)
-    dst_font = ImageFont.truetype(dst, size=char_size)
+    dst_font = ImageFont.truetype(dst, size=target_char_size)
 
     filter_hashes = set()
     if filter_by_hash:
@@ -123,8 +126,9 @@ parser.add_argument('--char_size', dest='char_size', type=int, default=150, help
 parser.add_argument('--canvas_size', dest='canvas_size', type=int, default=256, help='canvas size')
 parser.add_argument('--x_offset', dest='x_offset', type=int, default=20, help='source font x offset')
 parser.add_argument('--y_offset', dest='y_offset', type=int, default=20, help='source font y_offset')
-parser.add_argument('--tgt_x_offset', dest='tgt_x_offset', type=int, default=20, help='target font x offset')
-parser.add_argument('--tgt_y_offset', dest='tgt_y_offset', type=int, default=20, help='target font y_offset')
+parser.add_argument('--tgt_x_offset', dest='tgt_x_offset', type=int, default=None, help='target font x offset')
+parser.add_argument('--tgt_y_offset', dest='tgt_y_offset', type=int, default=None, help='target font y_offset')
+parser.add_argument('--tgt_char_size', dest='tgt_char_size', type=int, default=None, help='target character size')
 
 parser.add_argument('--sample_count', dest='sample_count', type=int, default=1000, help='number of characters to draw')
 parser.add_argument('--sample_dir', dest='sample_dir', default='sample_dir', help='directory to save examples')
@@ -146,4 +150,4 @@ if __name__ == "__main__":
         np.random.shuffle(charset)
     font2img(args.src_font, args.dst_font, charset, args.char_size,
              args.canvas_size, args.x_offset, args.y_offset,
-             args.sample_count, args.sample_dir, args.label, args.filter, args.mode, args.tgt_x_offset, args.tgt_y_offset)
+             args.sample_count, args.sample_dir, args.label, args.filter, args.mode, args.tgt_x_offset, args.tgt_y_offset, args.tgt_char_size)

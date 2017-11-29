@@ -5,6 +5,8 @@ import random
 import os
 from enum import Enum
 
+from .io import dump_image
+
 
 class PairPolicy(Enum):
     STRONG_PAIR = 1
@@ -55,9 +57,11 @@ def input_fn(path, shuffle=True, num_epochs=None, pair_policy=PairPolicy.STRONG_
     pickled = PickledImageProvider(path)
     processed = [np.array(process(e[1])).astype(np.float32) for e in pickled.examples]
     x = {
-        'source': np.array([img[0] for img in processed]),
-        'target': np.array([img[1] for img in processed])
+        'target': np.array([img[0] for img in processed]),
+        'source': np.array([img[1] for img in processed])
     }
+
+
 
     if pair_policy is PairPolicy.STRONG_PAIR:
         return tf.estimator.inputs.numpy_input_fn(

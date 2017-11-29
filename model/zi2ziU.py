@@ -57,7 +57,8 @@ def main(_):
         model = UNet(args.experiment_dir, batch_size=args.batch_size, experiment_id=args.experiment_id,
                      input_width=args.image_size, output_width=args.image_size, embedding_num=args.embedding_num,
                      embedding_dim=args.embedding_dim, L1_penalty=args.L1_penalty, Lconst_penalty=args.Lconst_penalty,
-                     Ltv_penalty=args.Ltv_penalty, Lcategory_penalty=args.Lcategory_penalty)
+                     Ltv_penalty=args.Ltv_penalty, Lcategory_penalty=args.Lcategory_penalty,
+                     )
         model.register_session(sess)
         model.build_model(is_training=True, inst_norm=args.inst_norm)
         tf.global_variables_initializer().run()
@@ -69,7 +70,7 @@ def main(_):
                      schedule=args.schedule, fine_tune=None,
                      sample_steps=args.sample_steps, checkpoint_steps=args.checkpoint_steps,
                      flip_labels=args.flip_labels,
-                     freeze_encoder=args.freeze_encoder, augment=True)
+                     freeze_encoder=args.freeze_encoder, augment=False)
 
 
 if __name__ == '__main__':

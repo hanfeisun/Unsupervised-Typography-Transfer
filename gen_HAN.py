@@ -10,7 +10,7 @@ parser = argparse.ArgumentParser(description='Train')
 # parser.add_argument('--src_font', dest='src_font', required=True, help='path of the source font')
 # parser.add_argument('--dst_font', dest='dst_font', required=True, help='path of the target font')
 parser.add_argument('--text', dest='text', default=None)
-parser.add_argument('--checkpoint', dest='checkpoint', required=True)
+# parser.add_argument('--checkpoint', dest='checkpoint', required=True)
 
 args = parser.parse_args()
 
@@ -25,8 +25,9 @@ def inspect_graph():
 
 from subprocess import call
 
-
+X = None
 def main(_):
+    global X
     config = tf.ConfigProto()
     with open("./infer_charset", "w") as f:
         if args.text:
@@ -38,28 +39,29 @@ def main(_):
         f.write("ABCDEFGHIJKLM")
         f.write("\n")
 
-
-
     call(
-        "rm -rf zi2ziu_infer_sample && mkdir -p zi2ziu_infer_sample",
+        "rm -rf HAN_infer_sample && mkdir -p HAN_infer_sample",
         shell=True)
     call(
-        "python3 font2img.py --src_font fonts/NotoSansCJK.ttc --dst_font fonts/NotoSerifCJK.ttc --sample_dir zi2ziu_infer_sample --mode RGB  --charset infer_charset",
+        "python3 font2img.py --src_font fonts/NotoSansCJK.ttc --dst_font fonts/XingKai.ttf --canvas_size 64  --sample_dir HAN_infer_sample \
+	--char_size 48 --x_offset 0 --y_offset 0  --mode L  --charset GB2312 --tgt_x_offset 0 --tgt_y_offset 5 --tgt_char_size 60 --charset infer_charset",
         shell=True)
 
     call(
-        "python3 img2pickle.py --dir zi2ziu_infer_sample --save_dir zi2ziu_infer_sample --split_ratio 1",
+        "python3 img2pickle.py --dir HAN_infer_sample --save_dir HAN_infer_sample --split_ratio 1",
         shell=True
     )
 
-    with tf.Session(config=config) as sess:
-        model = UNet()
-        model.register_session(sess)
-        model.build_model(is_training=False)
-        tf.global_variables_initializer().run()
-        model.infer(source_obj="./zi2ziu_infer_sample/val.obj", model_dir=args.checkpoint,
-                    embedding_ids=[0], save_dir="./inferred/")
-    print("Done")
+    from model.HAN import model_fn
+    from model.dataset import input_fn
+    from model.io import dump_image
+
+    nn = tf.estimator.Estimator(model_fn=model_fn, model_dir="./model_dir/HAN", params={"learning_rate": 0.0002})
+    transfers = nn.predict(input_fn=input_fn("./HAN_infer_sample/val.obj", shuffle=False, num_epochs=1))
+
+    for i, t in enumerate(transfers):
+        dump_image('./model_dir/%s.png' % i, t["g"])
+
 
 
 if __name__ == '__main__':

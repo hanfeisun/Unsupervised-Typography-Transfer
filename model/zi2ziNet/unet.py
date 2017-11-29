@@ -21,7 +21,7 @@ SummaryHandle = namedtuple("SummaryHandle", ["d_merged", "g_merged"])
 
 
 class UNet(object):
-    def __init__(self, experiment_dir=None, experiment_id=0, batch_size=16, input_width=256, output_width=256,
+    def __init__(self, experiment_dir=None, experiment_id=0, batch_size=32, input_width=256, output_width=256,
                  generator_dim=64, discriminator_dim=64, L1_penalty=100, Lconst_penalty=15, Ltv_penalty=0.1,
                  Lcategory_penalty=1.0, embedding_num=40, embedding_dim=128, input_filters=1, output_filters=1):
         self.experiment_dir = experiment_dir
@@ -59,7 +59,7 @@ class UNet(object):
                 print("create sample directory")
 
             val_loss_file_name = os.path.join(self.log_dir, "val_loss") \
-                + " " + time.strftime("%Y-%m-%d %H-%M-%S", time.gmtime())
+                                 + " " + time.strftime("%Y-%m-%d %H-%M-%S", time.gmtime())
             self.val_loss_file = open(val_loss_file_name, "w")
 
     def encoder(self, images, is_training, reuse=False):
@@ -118,13 +118,10 @@ class UNet(object):
 
                 return dec
 
-
-
             d1 = decode_layer(encoded, s128, self.generator_dim * 8, layer=1, enc_layer=encoding_layers["e7"],
                               dropout=True)
 
             d2 = decode_layer(d1, s64, self.generator_dim * 8, layer=2, enc_layer=encoding_layers["e6"], dropout=True)
-
 
             d3 = decode_layer(d2, s32, self.generator_dim * 8, layer=3, enc_layer=encoding_layers["e5"], dropout=True)
             d4 = decode_layer(d3, s16, self.generator_dim * 8, layer=4, enc_layer=encoding_layers["e4"])
@@ -217,20 +214,20 @@ class UNet(object):
         # print(k.shape)
         # raise
         d_loss = (tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=logits_1,
-                                                                         labels=tf.one_hot(indices=[0]*batch_size,
+                                                                         labels=tf.one_hot(indices=[0] * batch_size,
                                                                                            depth=3))) +
                   tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=logits_2,
-                                                                         labels=tf.one_hot(indices=[1]*batch_size,
+                                                                         labels=tf.one_hot(indices=[1] * batch_size,
                                                                                            depth=3))) +
                   tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=logits_3,
-                                                                         labels=tf.one_hot(indices=[2]*batch_size,
+                                                                         labels=tf.one_hot(indices=[2] * batch_size,
                                                                                            depth=3))))
 
         GANG_loss = (tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=logits_1,
-                                                                            labels=tf.one_hot(indices=[2]*batch_size,
+                                                                            labels=tf.one_hot(indices=[2] * batch_size,
                                                                                               depth=3))) +
                      tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=logits_2,
-                                                                            labels=tf.one_hot(indices=[2]*batch_size,
+                                                                            labels=tf.one_hot(indices=[2] * batch_size,
                                                                                               depth=3))))
 
         g_loss = tv_loss + const_loss + GANG_loss + tid_loss
@@ -359,7 +356,7 @@ class UNet(object):
         merged_real_images = merge(scale_back(real_imgs), [self.batch_size, 1])
         l2_los = l2_loss(merged_fake_images, merged_real_images)
         msg = "Sample: epoch: %d, d_loss: %.5f, g_loss: %.5f, l2_loss: %.5f" % \
-            (epoch, d_loss, g_loss, l2_los)
+              (epoch, d_loss, g_loss, l2_los)
         print(msg)
         self.val_loss_file.write(msg + '\n')
         self.val_loss_file.flush()
@@ -382,14 +379,19 @@ class UNet(object):
         gen_saver = tf.train.Saver(var_list=self.retrieve_generator_vars())
         gen_saver.save(self.sess, os.path.join(save_dir, model_name), global_step=0)
 
-    def infer(self, source_obj, embedding_ids, model_dir, save_dir):
+    def infer(self, source_obj, embedding_ids, model_dir, save_dir, char_num_x=None, char_num_y=None):
+        if char_num_y is None:
+            char_num_y = self.batch_size
+        if char_num_x is None:
+            char_num_x = 10
+
         source_provider = InjectDataProvider(source_obj)
 
         if isinstance(embedding_ids, int) or len(embedding_ids) == 1:
             embedding_id = embedding_ids if isinstance(embedding_ids, int) else embedding_ids[0]
-            source_iter = source_provider.get_single_embedding_iter(self.batch_size, embedding_id)
+            source_iter = source_provider.get_single_embedding_iter(char_num_y, embedding_id)
         else:
-            source_iter = source_provider.get_random_embedding_iter(self.batch_size, embedding_ids)
+            source_iter = source_provider.get_random_embedding_iter(char_num_y, embedding_ids)
 
         tf.global_variables_initializer().run()
         saver = tf.train.Saver(var_list=self.retrieve_generator_vars())
@@ -406,14 +408,16 @@ class UNet(object):
         target_batch_buffer = list()
         for labels, source_imgs in source_iter:
             fake_imgs = self.generate_fake_samples(source_imgs, labels)[0]
-            merged_fake_images = merge(scale_back(fake_imgs), [self.batch_size, 1])
-            merged_target_images= merge(scale_back(source_imgs[:, :, :, :self.input_filters]), [self.batch_size, 1])
-            merged_source_images = merge(scale_back(source_imgs[:, :, :, self.input_filters:self.input_filters + self.output_filters]), [self.batch_size, 1])
+            merged_fake_images = merge(scale_back(fake_imgs), [char_num_y, 1])
+            merged_target_images = merge(scale_back(source_imgs[:, :, :, :self.input_filters]), [char_num_y, 1])
+            merged_source_images = merge(
+                scale_back(source_imgs[:, :, :, self.input_filters:self.input_filters + self.output_filters]),
+                [char_num_y, 1])
 
-            batch_buffer.append(merged_fake_images)
-            source_batch_buffer.append(merged_source_images)
-            target_batch_buffer.append(merged_target_images)
-            if len(batch_buffer) == 10:
+            batch_buffer.insert(0, merged_fake_images)
+            source_batch_buffer.insert(0, merged_source_images)
+            target_batch_buffer.insert(0, merged_target_images)
+            if len(batch_buffer) == char_num_x:
                 save_imgs(batch_buffer, count)
                 save_imgs(source_batch_buffer, count, suffix="_src")
                 save_imgs(target_batch_buffer, count, suffix="_tgt")
@@ -528,7 +532,7 @@ class UNet(object):
         total_batches = data_provider.compute_total_batch_num(self.batch_size)
         val_batch_iter = data_provider.get_val_iter(self.batch_size)
 
-        saver = tf.train.Saver(max_to_keep=3)
+        saver = tf.train.Saver(max_to_keep=2)
         summary_writer = tf.summary.FileWriter(self.log_dir, self.sess.graph, max_queue=3)
 
         current_lr = lr
@@ -577,8 +581,6 @@ class UNet(object):
                 summary_writer.add_summary(g_summary, counter)
 
                 if counter % sample_steps == 1:
-
-
                     # sample the current model states with val data
                     self.validate_model(val_batch_iter, ei, counter)
 

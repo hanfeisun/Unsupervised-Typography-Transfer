@@ -5,6 +5,7 @@ D_PREFIX = "discriminator"
 
 
 def model_fn(features, labels, mode, params):
+
     def conv(feature, num_outputs, kernel_size, stride, scope_name, reuse=False, padding='same', BN=True):
         # construct a convolutional layer group
         with tf.variable_scope(scope_name, reuse=reuse):

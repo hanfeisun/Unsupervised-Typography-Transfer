@@ -16,8 +16,8 @@ model_params = {"learning_rate": args.lr}
 
 nn = tf.estimator.Estimator(model_fn=model_fn, params=model_params, model_dir="./model_dir/HAN")
 
-nn.train(input_fn=input_fn("./model_dir/train.obj"), steps=args.steps)
-# nn.evaluate(input_fn=input_fn("./model_dir/val.obj"), steps=1)
+nn.train(input_fn=input_fn("./model_dir/train.obj"), steps=2)
+
 
 transfers = nn.predict(input_fn=input_fn("./model_dir/val.obj", shuffle=False, num_epochs=1))
 
