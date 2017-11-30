@@ -505,7 +505,8 @@ class UNet(object):
             self.sess.run(op)
 
     def trainU(self, lr=0.0002, epoch=100, schedule=10, flip_labels=False,
-               fine_tune=None, sample_steps=20, checkpoint_steps=200, freeze_encoder=True, augment=False):
+               fine_tune=None, sample_steps=20, checkpoint_steps=200, freeze_encoder=True, augment=False,
+               model_dir=None):
         # Unsupervised version of zi2zi, modifications on the original train operations are:
         # (1) no embedding IDs, no category loss
         # (2) use pretrained model and freeze the encoders
@@ -523,6 +524,10 @@ class UNet(object):
         g_optimizer = tf.train.AdamOptimizer(learning_rate, beta1=0.5).minimize(loss_handle.g_loss,
                                                                                 var_list=g_vars)
         tf.global_variables_initializer().run()
+        if model_dir:
+            saver = tf.train.Saver(var_list=self.retrieve_generator_vars())
+            self.restore_model(saver, model_dir=model_dir)
+
         real_data = input_handle.real_data
         no_target_data = input_handle.no_target_data
         embedding_ids = input_handle.embedding_ids

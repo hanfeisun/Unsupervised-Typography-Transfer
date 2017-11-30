@@ -62,15 +62,13 @@ def main(_):
         model.register_session(sess)
         model.build_model(is_training=True, inst_norm=args.inst_norm)
         tf.global_variables_initializer().run()
-        saver = tf.train.Saver(var_list=model.retrieve_generator_vars())
-        model.restore_model(saver, args.experiment_dir)
         inspect_graph()
 
         model.trainU(lr=args.lr, epoch=args.epoch,
                      schedule=args.schedule, fine_tune=None,
                      sample_steps=args.sample_steps, checkpoint_steps=args.checkpoint_steps,
                      flip_labels=args.flip_labels,
-                     freeze_encoder=args.freeze_encoder, augment=False)
+                     freeze_encoder=args.freeze_encoder, augment=False, model_dir=args.experiment_dir)
 
 
 if __name__ == '__main__':
