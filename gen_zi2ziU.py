@@ -13,7 +13,8 @@ parser.add_argument('--text', dest='text', default=None)
 parser.add_argument('--checkpoint', dest='checkpoint')
 parser.add_argument('--prepare', dest='prepare', action='store_true', default=False)
 parser.add_argument('--infer', dest='infer', action='store_true', default=False)
-
+parser.add_argument('--x_offset', dest='x_offset', type=int, default=0, help='source font x offset')
+parser.add_argument('--y_offset', dest='y_offset', type=int, default=0, help='source font y_offset')
 
 args = parser.parse_args()
 
@@ -46,7 +47,8 @@ def main(_):
             "rm -rf zi2ziu_infer_sample && mkdir -p zi2ziu_infer_sample && mkdir inferred",
             shell=True)
         call(
-            "python3 font2img.py --src_font fonts/NotoSansCJK.ttc --dst_font %s --sample_dir zi2ziu_infer_sample --mode L  --charset infer_charset"%args.dst_font,
+            "python3 font2img.py --x_offset %s --y_offset %s --src_font fonts/NotoSansCJK.ttc --dst_font %s --sample_dir zi2ziu_infer_sample --mode L  --charset infer_charset " % (
+                args.x_offset, args.y_offset, args.dst_font),
             shell=True)
 
         call(

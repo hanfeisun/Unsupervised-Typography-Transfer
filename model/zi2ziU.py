@@ -28,7 +28,7 @@ parser.add_argument('--batch_size', dest='batch_size', type=int, default=16, hel
 parser.add_argument('--lr', dest='lr', type=float, default=0.001, help='initial learning rate for adam')
 parser.add_argument('--schedule', dest='schedule', type=int, default=10, help='number of epochs to half learning rate')
 parser.add_argument('--resume', dest='resume', type=int, default=1, help='resume from previous training')
-parser.add_argument('--freeze_encoder', dest='freeze_encoder', type=int, default=1,
+parser.add_argument('--freeze_encoder', dest='freeze_encoder', type=int, default=0,
                     help="freeze encoder weights during training")
 parser.add_argument('--fine_tune', dest='fine_tune', type=str, default=None,
                     help='specific labels id to be fine tuned')
@@ -40,6 +40,10 @@ parser.add_argument('--checkpoint_steps', dest='checkpoint_steps', type=int, def
                     help='number of batches in between two checkpoints')
 parser.add_argument('--flip_labels', dest='flip_labels', type=int, default=None,
                     help='whether flip training data labels or not, in fine tuning')
+parser.add_argument('--augment', dest='augment', action='store_true', default=False)
+parser.add_argument('--init_step', dest='init_step', type=int, default=0)
+
+
 args = parser.parse_args()
 
 
@@ -68,7 +72,7 @@ def main(_):
                      schedule=args.schedule, fine_tune=None,
                      sample_steps=args.sample_steps, checkpoint_steps=args.checkpoint_steps,
                      flip_labels=args.flip_labels,
-                     freeze_encoder=args.freeze_encoder, augment=False, model_dir=args.experiment_dir)
+                     freeze_encoder=args.freeze_encoder, augment=args.augment, model_dir=args.experiment_dir, init_step=args.init_step)
 
 
 if __name__ == '__main__':

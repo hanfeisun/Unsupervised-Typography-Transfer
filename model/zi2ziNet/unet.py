@@ -395,6 +395,7 @@ class UNet(object):
 
         tf.global_variables_initializer().run()
         saver = tf.train.Saver(var_list=self.retrieve_generator_vars())
+
         self.restore_model(saver, model_dir)
 
         def save_imgs(imgs, count, suffix=""):
@@ -506,7 +507,7 @@ class UNet(object):
 
     def trainU(self, lr=0.0002, epoch=100, schedule=10, flip_labels=False,
                fine_tune=None, sample_steps=20, checkpoint_steps=200, freeze_encoder=True, augment=False,
-               model_dir=None):
+               model_dir=None, init_step=0):
         # Unsupervised version of zi2zi, modifications on the original train operations are:
         # (1) no embedding IDs, no category loss
         # (2) use pretrained model and freeze the encoders
@@ -524,8 +525,9 @@ class UNet(object):
         g_optimizer = tf.train.AdamOptimizer(learning_rate, beta1=0.5).minimize(loss_handle.g_loss,
                                                                                 var_list=g_vars)
         tf.global_variables_initializer().run()
+
         if model_dir:
-            saver = tf.train.Saver(var_list=self.retrieve_generator_vars())
+            saver = tf.train.Saver(var_list=tf.trainable_variables())
             self.restore_model(saver, model_dir=model_dir)
 
         real_data = input_handle.real_data
@@ -541,7 +543,7 @@ class UNet(object):
         summary_writer = tf.summary.FileWriter(self.log_dir, self.sess.graph, max_queue=3)
 
         current_lr = lr
-        counter = 0
+        counter = init_step
         start_time = time.time()
 
         for ei in range(epoch):

@@ -68,10 +68,9 @@ zi2ziu_prepare_xiaozhuan:
 	mkdir -p ./zi2ziu_data
 	mkdir -p ./zi2ziu_experiment_xiaozhuan
 	python3 font2img_randompair.py --src_font fonts/NotoSansCJK.ttc --dst_font fonts/XiaoZhuan.ttf --sample_dir zi2ziu_sample \
-	--x_offset 10 --y_offset 0 --shuffle 1 --mode L  --charset GB2312 --tgt_x_offset 0 --tgt_y_offset 20 --tgt_char_size 180 --sample_count 3300 --overlap 1
+	--x_offset 35 --y_offset 0 --shuffle 1 --mode L  --charset GB2312 --tgt_x_offset 0 --tgt_y_offset 20 --char_size 120 --tgt_char_size 220 --sample_count 3300 --overlap 1
 	python3 img2pickle.py --dir zi2ziu_sample --save_dir zi2ziu_data
 	mkdir -p zi2ziu_experiment_xiaozhuan
-	mv -f zi2ziu_sample zi2ziu_experiment_xiaozhuan/
 	mv -f zi2ziu_data zi2ziu_experiment_xiaozhuan/data
 
 zi2ziu_train:
@@ -86,6 +85,9 @@ zi2ziu_train_xiaozhuan:
 
 zi2ziu_train_xingkai_randompair:
 	python3 model/zi2ziU.py --experiment_dir ../mount/zi2ziu_experiment_randompair/ --batch_size 16 --freeze_encoder 0 --lr 0.001 --Ltv_penalty 0.001 --image_size 256
+
+zi2ziu_train_xingkai_randompair_augment:
+	python3 model/zi2ziU.py --experiment_dir ../mount/zi2ziu_experiment_randompair_augment/ --batch_size 16 --freeze_encoder 0 --lr 0.001 --Ltv_penalty 0.001 --image_size 256 --augment
 
 zi2ziu_clean:
 	rm -rf zi2ziu_experiment/logs

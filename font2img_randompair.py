@@ -16,7 +16,7 @@ JP_CHARSET = None
 KR_CHARSET = None
 
 DEFAULT_CHARSET = "./charset/cjk.json"
-
+sample = False
 
 def load_global_charset():
     global CN_CHARSET, JP_CHARSET, KR_CHARSET, CN_T_CHARSET
@@ -54,6 +54,7 @@ def draw_single_char(ch, font, canvas_size, x_offset, y_offset):
 
 def draw_example(src_ch, dst_ch, src_font, dst_font, canvas_size, x_offset, y_offset, dst_x_offset, dst_y_offset, filter_hashes,
                  mode="L"):
+    global sample
     dst_img = draw_single_char(dst_ch, dst_font, canvas_size, dst_x_offset, dst_y_offset)
     # check the filter example in the hashes or not
     dst_hash = hash(dst_img.tobytes())
@@ -61,6 +62,13 @@ def draw_example(src_ch, dst_ch, src_font, dst_font, canvas_size, x_offset, y_of
         return None
     src_img = draw_single_char(src_ch, src_font, canvas_size, x_offset, y_offset)
     example_img = Image.new(mode, (canvas_size * 2, canvas_size), (255, 255, 255))
+
+
+    if not sample:
+        dst_img.save("dst.png")
+        src_img.save("src.png")
+        sample = True
+
     example_img.paste(dst_img, (0, 0))
     example_img.paste(src_img, (canvas_size, 0))
     return example_img
