@@ -64,7 +64,7 @@ def main(_):
                      Ltv_penalty=args.Ltv_penalty, Lcategory_penalty=args.Lcategory_penalty,
                      )
         model.register_session(sess)
-        model.build_model(is_training=True, inst_norm=args.inst_norm)
+        model.build_model(is_training=True)
         tf.global_variables_initializer().run()
         inspect_graph()
 

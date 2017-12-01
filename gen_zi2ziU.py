@@ -15,6 +15,9 @@ parser.add_argument('--prepare', dest='prepare', action='store_true', default=Fa
 parser.add_argument('--infer', dest='infer', action='store_true', default=False)
 parser.add_argument('--x_offset', dest='x_offset', type=int, default=0, help='source font x offset')
 parser.add_argument('--y_offset', dest='y_offset', type=int, default=0, help='source font y_offset')
+parser.add_argument('--tgt_x_offset', dest='tgt_x_offset', type=int, default=None, help='target font x offset')
+parser.add_argument('--tgt_y_offset', dest='tgt_y_offset', type=int, default=None, help='target font y_offset')
+parser.add_argument('--tgt_char_size', dest='tgt_char_size', type=int, default=None, help='target character size')
 
 args = parser.parse_args()
 
@@ -35,11 +38,18 @@ def main(_):
     with open("./infer_charset", "w") as f:
         if args.text:
             f.write(args.text)
-        f.write("南去經三國，東來過五湖。")
-        f.write("︽永東國酬愛鬱靈鷹袋︾")
-        f.write("あのイーハトーヴォのすきとおった風、夏でも底に冷たさをもつ青いそら、うつくしい森で飾られたモーリオ市、郊外のぎらぎらひかる草の波。")
-        f.write("동해물과、백두산이、마르고닳도록、하느님이、보우하사。")
-        f.write("ABCDEFGHIJKLM")
+        f.write("我是低端人口、")
+        f.write("小蝌蚪找妈妈。")
+        f.write("防风防盗防火墙")
+        f.write("支持威武有希望")
+        f.write("ABCDEFG")
+        f.write("ヱヴァンゲリヲ")
+
+        # f.write("︽永東國酬愛鬱靈鷹袋︾")
+        # f.write("あのイーハトーヴォのすきとおった風、夏でも底に冷たさをもつ青いそら、うつくしい森で飾られたモーリオ市、郊外のぎらぎらひかる草の波。")
+        # f.write("동해물과、백두산이、마르고닳도록、하느님이、보우하사。")
+        # f.write("ABCDEFGHIJKLM")
+        f.write("○△□×□△○")
         f.write("\n")
 
     if args.prepare:
@@ -47,8 +57,9 @@ def main(_):
             "rm -rf zi2ziu_infer_sample && mkdir -p zi2ziu_infer_sample && mkdir inferred",
             shell=True)
         call(
-            "python3 font2img.py --x_offset %s --y_offset %s --src_font fonts/NotoSansCJK.ttc --dst_font %s --sample_dir zi2ziu_infer_sample --mode L  --charset infer_charset " % (
-                args.x_offset, args.y_offset, args.dst_font),
+            "python3 font2img.py --x_offset %s --y_offset %s --src_font fonts/NotoSansCJK.ttc --dst_font %s --sample_dir zi2ziu_infer_sample --mode L  --charset infer_charset \
+             --tgt_char_size %s --tgt_x_offset %s --tgt_y_offset %s"
+            % (args.x_offset, args.y_offset, args.dst_font, args.tgt_char_size, args.tgt_x_offset, args.tgt_y_offset),
             shell=True)
 
         call(
@@ -61,12 +72,12 @@ def main(_):
             print("Need to assign a checkpoint file! Failed")
             return
         with tf.Session(config=config) as sess:
-            model = UNet(batch_size=9)
+            model = UNet(batch_size=7)
             model.register_session(sess)
             model.build_model(is_training=True)
             tf.global_variables_initializer().run()
             model.infer(source_obj="./zi2ziu_infer_sample/val.obj", model_dir=args.checkpoint,
-                        embedding_ids=[0], save_dir="./inferred/", char_num_x=16, char_num_y=9)
+                        embedding_ids=[0], save_dir="./inferred/", char_num_x=16, char_num_y=7)
     print("Done")
 
 
