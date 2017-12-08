@@ -12,6 +12,8 @@ from .ops import conv2d, deconv2d, lrelu, fc, batch_norm, init_embedding, condit
 from .dataset import TrainDataProvider, InjectDataProvider, NeverEndingLoopingProvider
 from .utils import scale_back, merge, save_concat_images, l2_loss
 
+from pdb import set_trace
+
 # Auxiliary wrapper classes
 # Used to save handles(important nodes in computation graph) for later evaluation
 LossHandle = namedtuple("LossHandle", ["d_loss", "g_loss", "const_loss", "tv_loss", "gang_loss"])
@@ -191,7 +193,7 @@ class UNet(object):
         # encoding constant loss
         # this loss assume that generated imaged and real image
         # should reside in the same space and close to each other
-        encoded_real_A_gen = self.encoder(real_A_gen, is_training, reuse=True)[0]
+        encoded_real_A_gen, encode_layers = self.encoder(real_A_gen, is_training, reuse=True)
         const_loss = (tf.reduce_mean(tf.square(encoded_real_A - encoded_real_A_gen))) * self.Lconst_penalty
 
         # binary real/fake loss
@@ -232,6 +234,29 @@ class UNet(object):
 
         g_loss = tv_loss + const_loss + GANG_loss + tid_loss
 
+        e1 = encode_layers['e1']
+        ##### Construct e1 batch images
+        def get_img(e):
+            e1_img = get_row(e, 0)
+            for grid_row in range(1, 8):
+                row = get_row(e, grid_row)
+                e1_img = tf.concat([e1_img, row], axis=0)
+            e1_img = tf.reshape(e1_img, [512, 512, 1])
+            return e1_img
+
+        def get_row(e, grid_row):
+            start = grid_row * 8
+            row = e[:, :, start]
+            for i in range(1, 8):
+                row = tf.concat([row, e[:, :, start + i]], axis=1)
+            return row
+
+        e1_batch_imgs = []
+        for i in range(8):
+            e1_img = get_img(e1[i])
+            e1_batch_imgs.append(e1_img)
+        e1_batch_imgs = tf.convert_to_tensor(e1_batch_imgs)
+
         const_loss_summary = tf.summary.scalar("const_loss", const_loss)
         d_loss_summary = tf.summary.scalar("d_loss", d_loss)
         g_loss_summary = tf.summary.scalar("g_loss", g_loss)
@@ -242,6 +267,7 @@ class UNet(object):
         B_summary = tf.summary.image("B", real_B, max_outputs=2)
         A_gen_summary = tf.summary.image("A_gen", real_A_gen, max_outputs=2)
         B_gen_summary = tf.summary.image("B_gen", real_B_gen, max_outputs=2)
+        conv1_summary = tf.summary.image("Conv1", e1_batch_imgs, max_outputs=2)
 
         d_merged_summary = tf.summary.merge([
             d_loss_summary])
@@ -250,7 +276,7 @@ class UNet(object):
             const_loss_summary,
             g_loss_summary, tv_loss_summary, tid_loss_summary,
             A_summary, B_summary,
-            A_gen_summary, B_gen_summary])
+            A_gen_summary, B_gen_summary, conv1_summary])
 
         # expose useful nodes in the graph as handles globally
         input_handle = InputHandle(real_data=real_data,
