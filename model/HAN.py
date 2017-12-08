@@ -118,9 +118,9 @@ def model_fn(features, labels, mode, params):
 
     def get_row(e, grid_row):
         start = grid_row * 8
-        row = e[start]
+        row = e[:, :, start]
         for i in range(1, 8):
-            row = tf.concat([row, e[start + i]], axis=1)
+            row = tf.concat([row, e[:, :, start + i]], axis=1)
         return row
 
     e1_batch_imgs = []
@@ -129,15 +129,23 @@ def model_fn(features, labels, mode, params):
         e1_batch_imgs.append(e1_img)
     e1_batch_imgs = tf.convert_to_tensor(e1_batch_imgs)
 
+    ##### Construct d10 batch images
+    d10_batch_imgs = []
+    for i in range(8):
+        d10_img = get_img(d10[i])
+        d10_batch_imgs.append(d10_img)
+    d10_batch_imgs = tf.convert_to_tensor(d10_batch_imgs)
+
     if mode == tf.estimator.ModeKeys.TRAIN:
         tf.summary.scalar("d_fake_loss", d_loss_fake)
         tf.summary.scalar("d_loss", d_loss)
         tf.summary.scalar("pixel_loss", pixel_loss)
         tf.summary.scalar("g_loss", g_loss)
-        tf.summary.image("original", features['source'])
-        tf.summary.image("target", features['target'])
-        tf.summary.image("transfered", generated)
-        tf.summary.image("conv1", e1_batch_imgs) ##### Added
+        tf.summary.image("original", features['source'], max_outputs=1)
+        tf.summary.image("target", features['target'], max_outputs=1)
+        tf.summary.image("transfered", generated, max_outputs=1)
+        tf.summary.image("conv1", e1_batch_imgs, max_outputs=1) ##### Added
+        tf.summary.image("deconv4", d10_batch_imgs, max_outputs=1) ##### Added
     else:
         # EVAL
         tf.summary.scalar("cross_entropy_loss", pixel_loss)
