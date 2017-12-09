@@ -133,15 +133,15 @@ class UNet(object):
             d8 = decode_layer(d7, s, self.output_filters, layer=8, enc_layer=None, do_concat=False)
 
             output = tf.nn.tanh(d8)  # scale to (-1, 1)
-            return output
+            return output, d7
 
     def generator(self, images, embeddings, embedding_ids, inst_norm, is_training, reuse=False):
         e8, enc_layers = self.encoder(images, is_training=is_training, reuse=reuse)
         local_embeddings = tf.nn.embedding_lookup(embeddings, ids=embedding_ids)
         local_embeddings = tf.reshape(local_embeddings, [self.batch_size, 1, 1, self.embedding_dim])
         embedded = tf.concat([e8, local_embeddings], 3)
-        output = self.decoder(embedded, enc_layers, embedding_ids, inst_norm, is_training=is_training, reuse=reuse)
-        return output, e8
+        output, d7 = self.decoder(embedded, enc_layers, embedding_ids, inst_norm, is_training=is_training, reuse=reuse)
+        return output, e8, enc_layers['e1'], d7
 
     def discriminator(self, image, is_training, reuse=False):
         with tf.variable_scope("discriminator"):
@@ -177,10 +177,10 @@ class UNet(object):
         real_A = real_data[:, :, :, self.input_filters:self.input_filters + self.output_filters]
 
         embedding = init_embedding(self.embedding_num, self.embedding_dim)
-        real_A_gen, encoded_real_A = self.generator(real_A, embedding, embedding_ids, is_training=is_training,
-                                                    inst_norm=inst_norm)
-        real_B_gen, _ = self.generator(real_B, embedding, embedding_ids, is_training=is_training,
-                                       inst_norm=inst_norm, reuse=True)
+        real_A_gen, encoded_real_A, e1, d7 = self.generator(real_A, embedding, embedding_ids, is_training=is_training,
+                                                            inst_norm=inst_norm)
+        real_B_gen, _, _, _ = self.generator(real_B, embedding, embedding_ids, is_training=is_training,
+                                             inst_norm=inst_norm, reuse=True)
 
         tid_loss = self.L1_penalty * tf.reduce_mean(tf.abs(real_B_gen - real_B))
 
@@ -193,7 +193,7 @@ class UNet(object):
         # encoding constant loss
         # this loss assume that generated imaged and real image
         # should reside in the same space and close to each other
-        encoded_real_A_gen, encode_layers = self.encoder(real_A_gen, is_training, reuse=True)
+        encoded_real_A_gen, _ = self.encoder(real_A_gen, is_training, reuse=True)
         const_loss = (tf.reduce_mean(tf.square(encoded_real_A - encoded_real_A_gen))) * self.Lconst_penalty
 
         # binary real/fake loss
@@ -234,28 +234,33 @@ class UNet(object):
 
         g_loss = tv_loss + const_loss + GANG_loss + tid_loss
 
-        e1 = encode_layers['e1']
         ##### Construct e1 batch images
-        def get_img(e):
-            e1_img = get_row(e, 0)
+        def get_img(e, cols):
+            e1_img = get_row(e, 0, cols)
             for grid_row in range(1, 8):
-                row = get_row(e, grid_row)
+                row = get_row(e, grid_row, cols)
                 e1_img = tf.concat([e1_img, row], axis=0)
-            e1_img = tf.reshape(e1_img, [512, 512, 1])
+            e1_img = tf.reshape(e1_img, [1024, 128 * cols, 1])
             return e1_img
 
-        def get_row(e, grid_row):
+        def get_row(e, grid_row, cols):
             start = grid_row * 8
             row = e[:, :, start]
-            for i in range(1, 8):
+            for i in range(1, cols):
                 row = tf.concat([row, e[:, :, start + i]], axis=1)
             return row
 
         e1_batch_imgs = []
-        for i in range(8):
-            e1_img = get_img(e1[i])
+        for i in range(self.batch_size):
+            e1_img = get_img(e1[i], 8)
             e1_batch_imgs.append(e1_img)
         e1_batch_imgs = tf.convert_to_tensor(e1_batch_imgs)
+
+        d7_batch_imgs = []
+        for i in range(self.batch_size):
+            d7_img = get_img(d7[i], 16)
+            d7_batch_imgs.append(d7_img)
+        d7_batch_imgs = tf.convert_to_tensor(d7_batch_imgs)
 
         const_loss_summary = tf.summary.scalar("const_loss", const_loss)
         d_loss_summary = tf.summary.scalar("d_loss", d_loss)
@@ -267,7 +272,8 @@ class UNet(object):
         B_summary = tf.summary.image("B", real_B, max_outputs=2)
         A_gen_summary = tf.summary.image("A_gen", real_A_gen, max_outputs=2)
         B_gen_summary = tf.summary.image("B_gen", real_B_gen, max_outputs=2)
-        conv1_summary = tf.summary.image("Conv1", e1_batch_imgs, max_outputs=2)
+        conv1_summary = tf.summary.image("Conv1", e1_batch_imgs, max_outputs=1)
+        deconv8_summary = tf.summary.image("Deconv8", d7_batch_imgs, max_outputs=1)
 
         d_merged_summary = tf.summary.merge([
             d_loss_summary])
@@ -276,7 +282,7 @@ class UNet(object):
             const_loss_summary,
             g_loss_summary, tv_loss_summary, tid_loss_summary,
             A_summary, B_summary,
-            A_gen_summary, B_gen_summary, conv1_summary])
+            A_gen_summary, B_gen_summary, conv1_summary, deconv8_summary])
 
         # expose useful nodes in the graph as handles globally
         input_handle = InputHandle(real_data=real_data,
