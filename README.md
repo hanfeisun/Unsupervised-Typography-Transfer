@@ -1,5 +1,9 @@
 # Unsupervised Chinese Typography Transfer
 
+## Demo and Details
+
+See https://arxiv.org/abs/1802.02595
+
 ## Prerequisite
 
 Install Python3 (>=3.5)
