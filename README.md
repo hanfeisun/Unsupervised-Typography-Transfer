@@ -2,7 +2,9 @@
 
 ## Demo and Details
 
-See https://arxiv.org/abs/1802.02595
+See https://zhuanlan.zhihu.com/p/31619824
+
+Or https://arxiv.org/abs/1802.02595 for details
 
 ## Prerequisite
 
