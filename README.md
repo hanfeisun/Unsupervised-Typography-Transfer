@@ -47,3 +47,15 @@ While the model is being trained, open a new tab and type
 ```
   tensorboard --logdir ./board
 ```
+
+## Acknowledgements
+Code derived from:
+
+* [zi2zi](https://github.com/kaonashi-tyc/zi2zi) by [Yuchen Tian](https://github.com/kaonashi-tyc)
+
+Network architecture derived from:
+
+* [Chinese typography transfer](https://arxiv.org/abs/1707.04904) by Jie Chang and Yujun Gu
+
+## License
+Apache 2.0
