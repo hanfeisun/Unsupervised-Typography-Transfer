@@ -1,4 +1,4 @@
-tensorflow-gpu==1.4
+tensorflow-gpu==2.5.1
 tensorflow-tensorboard==0.1.8
 imageio==2.2.0
 numpy==1.13.3
